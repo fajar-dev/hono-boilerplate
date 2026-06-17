@@ -1,0 +1,290 @@
+openapi: 3.0.0
+info:
+  title: Hono BE API
+  description: API Documentation for Hono BE Backend Service — Authentication module.
+  version: 2.0.0
+servers:
+  - url: http://localhost:4000/api
+    description: Local development server
+  - url: /api
+    description: Relative API server
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "JWT access token. Expires in 15 minutes."
+
+  schemas:
+    # --- Base Wrapper Schemas ---
+    BaseResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: true }
+        statusCode: { type: integer, example: 200 }
+        message: { type: string, example: "Operation successful" }
+
+    ValidationError:
+      type: object
+      properties:
+        success: { type: boolean, example: false }
+        statusCode: { type: integer, example: 422 }
+        message: { type: string, example: "Validation failed" }
+        errors:
+          type: object
+          example:
+            email: "Invalid email format"
+            password: "Password must be at least 6 characters"
+
+    # --- Auth Schemas ---
+    RegisterRequest:
+      type: object
+      required: [name, email, password]
+      properties:
+        name: { type: string, example: "Budi Santoso" }
+        email: { type: string, format: email, example: "budi@example.com" }
+        password: { type: string, minLength: 6, example: "secret123" }
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email, example: "budi@example.com" }
+        password: { type: string, example: "secret123" }
+
+    GoogleLoginRequest:
+      type: object
+      required: [code]
+      properties:
+        code: { type: string, example: "4/0AX4XfWh..." }
+
+    ForgotPasswordRequest:
+      type: object
+      required: [email]
+      properties:
+        email: { type: string, format: email, example: "budi@example.com" }
+
+    ResetPasswordRequest:
+      type: object
+      required: [token, newPassword]
+      properties:
+        token: { type: string, example: "a3f8c2d1e9b4..." }
+        newPassword: { type: string, minLength: 6, example: "newSecret123" }
+
+    RefreshTokenRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken: { type: string, example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." }
+
+    # --- User Schema ---
+    AuthUser:
+      type: object
+      properties:
+        id: { type: integer, example: 1 }
+        name: { type: string, example: "Budi Santoso" }
+        photo: { type: string, nullable: true, example: "https://cdn.example.com/photo.jpg" }
+        email: { type: string, format: email, example: "budi@example.com" }
+        isActive: { type: boolean, example: true }
+
+    AuthResponse:
+      type: object
+      properties:
+        user: { $ref: "#/components/schemas/AuthUser" }
+        accessToken:
+          type: string
+          description: "JWT access token, expires in 15 minutes"
+          example: "eyJhbGciOiJIUzI1NiIs..."
+        refreshToken:
+          type: string
+          description: "JWT refresh token, expires in 7 days"
+          example: "eyJhbGciOiJIUzI1NiIs..."
+
+paths:
+  # ── Register ──────────────────────────────────────────────────────────────
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RegisterRequest" }
+      responses:
+        "201":
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BaseResponse"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/AuthUser" }
+        "422": { description: Validation error, content: { application/json: { schema: { $ref: "#/components/schemas/ValidationError" } } } }
+
+  # ── Login ─────────────────────────────────────────────────────────────────
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LoginRequest" }
+      responses:
+        "200":
+          description: Logged in successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BaseResponse"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/AuthResponse" }
+        "401": { description: Invalid credentials }
+        "422": { description: Validation error }
+
+  # ── Google Login ──────────────────────────────────────────────────────────
+  /auth/google:
+    post:
+      tags: [Auth]
+      summary: Login with Google OAuth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/GoogleLoginRequest" }
+      responses:
+        "200":
+          description: Logged in successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BaseResponse"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/AuthResponse" }
+        "400": { description: User not registered or account inactive }
+
+  # ── Forgot Password ──────────────────────────────────────────────────────
+  /auth/forgot-password:
+    post:
+      tags: [Auth]
+      summary: Request password reset email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ForgotPasswordRequest" }
+      responses:
+        "200":
+          description: Password reset instructions sent
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BaseResponse" }
+        "400": { description: Email not found or account inactive }
+
+  # ── Validate Reset Token ─────────────────────────────────────────────────
+  /auth/validate-reset-token:
+    get:
+      tags: [Auth]
+      summary: Validate a password reset token
+      parameters:
+        - name: email
+          in: query
+          required: true
+          schema: { type: string, format: email }
+        - name: token
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Token is valid
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BaseResponse" }
+        "400": { description: Invalid or expired reset token }
+
+  # ── Reset Password ──────────────────────────────────────────────────────
+  /auth/reset-password:
+    post:
+      tags: [Auth]
+      summary: Reset password with token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ResetPasswordRequest" }
+      responses:
+        "200":
+          description: Password reset successfully
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BaseResponse" }
+        "400": { description: Invalid or expired reset token }
+
+  # ── Refresh Token ────────────────────────────────────────────────────────
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RefreshTokenRequest" }
+      responses:
+        "200":
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BaseResponse"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/AuthResponse" }
+        "401": { description: Invalid or expired refresh token }
+
+  # ── Me ───────────────────────────────────────────────────────────────────
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Get current authenticated user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: User profile retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BaseResponse"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/AuthUser" }
+        "401": { description: Unauthorized }
+
+  # ── Logout ───────────────────────────────────────────────────────────────
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout current user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Logged out successfully
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BaseResponse" }
+        "401": { description: Unauthorized }
