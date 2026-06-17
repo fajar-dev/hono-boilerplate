@@ -62,6 +62,13 @@ export class TypeOrmUserRepository implements IUserRepository {
             .getOne()
     }
 
+    async findByIdWithPassword(id: number): Promise<User | null> {
+        return await this.repository.createQueryBuilder("user")
+            .where("user.id = :id", { id })
+            .addSelect("user.password")
+            .getOne()
+    }
+
     async findByResetToken(token: string): Promise<User | null> {
         return await this.repository.createQueryBuilder("user")
             .where("user.reset_password_token = :token", { token })

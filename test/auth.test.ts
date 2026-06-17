@@ -120,6 +120,7 @@ describe("POST /api/auth/login", () => {
         expect(body.message).toBe("Logged in successfully")
         expect(body.data.user).toBeDefined()
         expect(body.data.user.email).toBe(userData.email)
+        expect(body.data.user.hasPassword).toBe(true)
         expect(body.data.accessToken).toBeDefined()
         expect(body.data.refreshToken).toBeDefined()
         // Password should NOT be in response
@@ -231,6 +232,7 @@ describe("GET /api/auth/me", () => {
         expect(body.data.email).toBe(user.email)
         expect(body.data.name).toBe(user.name)
         expect(body.data.id).toBe(user.id)
+        expect(body.data.hasPassword).toBe(true)
         // Password should NOT be in response
         expect(body.data.password).toBeUndefined()
     })

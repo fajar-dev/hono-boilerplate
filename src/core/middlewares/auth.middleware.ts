@@ -16,7 +16,10 @@ export const authMiddleware = async (c: Context, next: Next) => {
     try {
         const decoded = await verify(token, config.app.jwtSecret, "HS256") as { sub: number }
         const userRepository = AppDataSource.getRepository(User)
-        const user = await userRepository.findOneBy({ id: decoded.sub })
+        const user = await userRepository.findOne({
+            where: { id: decoded.sub },
+            select: ["id", "name", "photo", "email", "password", "isActive", "createdAt", "updatedAt"]
+        })
 
         if (!user) {
             throw new UnauthorizedException("Unauthorized access")

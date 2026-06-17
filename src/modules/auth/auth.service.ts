@@ -38,7 +38,7 @@ export class AuthService {
 
     async googleLogin(data: GoogleLoginValidator) {
         const payload = await AuthHelper.verifyGoogleCode(data.code)
-        let user = await this.userService.getByEmail(payload.email!)
+        let user = await this.userService.getByEmailWithPassword(payload.email!)
 
         if (!user) {
             throw new BadRequestException("User not registered")
@@ -80,7 +80,7 @@ export class AuthService {
     async refreshToken(data: RefreshTokenValidator) {
         try {
             const decoded = await verify(data.refreshToken, config.app.jwtRefreshSecret, "HS256") as { sub: number }
-            const user = await this.userService.getById(decoded.sub)
+            const user = await this.userService.getByIdWithPassword(decoded.sub)
             const { accessToken, refreshToken } = await AuthHelper.generateTokens(user)
 
             return { user, accessToken, refreshToken }
@@ -137,7 +137,7 @@ export class AuthService {
     }
 
     async updateProfile(userId: number, data: { name: string; email: string; photo?: string | null }) {
-        const user = await this.userService.getById(userId)
+        const user = await this.userService.getByIdWithPassword(userId)
         
         if (data.email && data.email !== user.email) {
             const existing = await this.userService.getByEmail(data.email)
@@ -156,14 +156,13 @@ export class AuthService {
     }
 
     async updatePassword(userId: number, data: { oldPassword?: string; newPassword: string }) {
-        const user = await this.userService.getById(userId)
-        const userWithPassword = await this.userService.getByEmailWithPassword(user.email)
+        const user = await this.userService.getByIdWithPassword(userId)
         
-        if (userWithPassword && userWithPassword.password) {
+        if (user.password) {
             if (!data.oldPassword) {
                 throw new BadRequestException("Old password is required")
             }
-            const isValid = await comparePassword(data.oldPassword, userWithPassword.password)
+            const isValid = await comparePassword(data.oldPassword, user.password)
             if (!isValid) {
                 throw new BadRequestException("Invalid old password")
             }

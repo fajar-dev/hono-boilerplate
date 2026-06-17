@@ -14,6 +14,7 @@ export class AuthSerializer {
             photo: await this.resolvePhotoUrl(user.photo),
             email: user.email,
             isActive: Boolean(user.isActive),
+            hasPassword: !!user.password,
         }
     }
 
