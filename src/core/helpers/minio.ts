@@ -136,28 +136,39 @@ class MinioHelper {
 
     /**
      * Extracts the relative path of an object from a full URL, or returns it as-is if already relative.
-     * Useful when clients submit absolute URLs containing presigned parameters back to the server.
+     * Robust against nested, double-encoded URLs.
      */
     sanitizePath(urlOrPath: string | null | undefined, bucket: string = BUCKET): string | null {
         if (!urlOrPath) return null
-        if (!urlOrPath.startsWith('http://') && !urlOrPath.startsWith('https://')) {
-            return urlOrPath
-        }
+        
+        let decoded = urlOrPath
         try {
-            const parsed = new URL(urlOrPath)
-            const prefix = `/${bucket}/`
-            if (parsed.pathname.startsWith(prefix)) {
-                return parsed.pathname.substring(prefix.length)
+            // Recursively decode URL-encoded segments if nested
+            while (decoded && decoded.includes('%')) {
+                const next = decodeURIComponent(decoded)
+                if (next === decoded) break
+                decoded = next
             }
-            // Fallback: check if the first path segment is the bucket name
-            const parts = parsed.pathname.split('/').filter(Boolean)
-            if (parts[0] === bucket) {
-                return parts.slice(1).join('/')
-            }
-            return parsed.pathname
         } catch {
-            return urlOrPath
+            // Ignore decoding errors
         }
+
+        // If the URL contains the bucket name, extract everything after the last occurrence of the bucket name
+        const marker = `/${bucket}/`
+        if (decoded.includes(marker)) {
+            const parts = decoded.split(marker)
+            decoded = parts[parts.length - 1]
+        }
+
+        // Strip query parameters
+        if (decoded.includes('?')) {
+            decoded = decoded.split('?')[0]
+        }
+
+        // Clean up leading/trailing slashes
+        decoded = decoded.replace(/^\/+|\/+$/g, '')
+
+        return decoded || null
     }
 }
 

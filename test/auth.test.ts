@@ -485,11 +485,12 @@ describe("PUT /api/auth/profile", () => {
         expect(res1.body.data.photo).toContain("users/abc.png")
         const absoluteUrl = res1.body.data.photo
 
-        // 2. Update profile using the returned absolute URL
+        // 2. Update profile using a heavily nested, double URL-encoded absolute path
+        const nestedUrl = `http://internship.nusa.net.id:9000/stock/http%3A//internship.nusa.net.id%3A9000/stock/http%253A//internship.nusa.net.id%253A9000/stock/${encodeURIComponent(absoluteUrl)}`
         const res2 = await request(app, "/api/auth/profile", {
             method: "PUT",
             headers,
-            body: { name: "Test User", email: "testphoto@example.com", photo: absoluteUrl },
+            body: { name: "Test User", email: "testphoto@example.com", photo: nestedUrl },
         })
         expect(res2.status).toBe(200)
         expect(res2.body.success).toBe(true)
