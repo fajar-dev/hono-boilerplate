@@ -32,15 +32,15 @@ cp .env.dist .env
 | `DB_USER` | string | `root` | Username database |
 | `DB_PASS` | string | _(kosong)_ | Password database |
 | `DB_NAME` | string | `hono_be` | Nama database |
-| `DB_SYNC` | boolean | `true` | Auto-sync schema TypeORM. **Set `false` di production!** |
+| `DB_SYNC` | boolean | `false` | Auto-sync schema TypeORM. **Otomatis `false` di production (hardcoded).** |
 
 #### Authentication
 
 | Variable | Tipe | Default | Deskripsi |
 |----------|------|---------|-----------|
-| `JWT_SECRET` | string | `supersecretkey` | Secret key untuk access token (15 menit) |
-| `JWT_REFRESH_SECRET` | string | `superrefreshsecretkey` | Secret key untuk refresh token (7 hari) |
-| `API_KEY` | string | _(kosong)_ | Kunci untuk server-to-server authentication |
+| `JWT_SECRET` | string | _(dev only)_ | **WAJIB di production.** Secret key untuk access token (15 menit) |
+| `JWT_REFRESH_SECRET` | string | _(dev only)_ | **WAJIB di production.** Secret key untuk refresh token (7 hari) |
+| `API_KEY` | string | _(dev only)_ | **WAJIB di production.** Kunci untuk server-to-server authentication |
 
 #### SMTP (Email)
 
@@ -125,6 +125,7 @@ Server berjalan di `http://localhost:4000`.
 
 | URL | Deskripsi |
 |-----|-----------|
+| `http://localhost:4000/health` | Health check (load balancer/K8s) |
 | `http://localhost:4000/api/docs` | Swagger UI |
 | `http://localhost:4000/api/swagger.yaml` | OpenAPI Spec |
 | `http://localhost:4000/api/...` | API endpoints |
@@ -267,3 +268,27 @@ Stack: Error stack trace...
 
 - Hanya error 500 yang dicatat ke file
 - Stack trace di response hanya tampil di environment `development`
+
+### Request Logs
+
+- Setiap request dicatat ke stdout (console) dengan format:
+
+```
+[2026-06-17T15:00:00.000Z] GET /api/contact → 200 (12ms)
+[2026-06-17T15:00:01.000Z] POST /api/auth/login → 401 (156ms)
+```
+
+- Status code di-color-coded: 🟢 2xx, 🟡 4xx, 🔴 5xx
+- Log ini bisa di-capture oleh Docker, PM2, atau monitoring tools
+
+---
+
+## 10. Production Safety
+
+| Safety | Behavior |
+|--------|----------|
+| `JWT_SECRET` tidak di-set | ❌ Crash saat startup |
+| `JWT_REFRESH_SECRET` tidak di-set | ❌ Crash saat startup |
+| `API_KEY` tidak di-set | ❌ Crash saat startup |
+| `DB_SYNC=true` di production | ⚠️ Otomatis diubah ke `false` |
+| Stack trace di response | ⚠️ Hidden di production |

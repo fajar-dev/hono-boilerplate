@@ -1,15 +1,36 @@
 /**
  * Global Application Configuration
  * All environment variables are centralized here
+ * 
+ * PRODUCTION SAFETY:
+ * - JWT secrets WAJIB di-set via environment variable di production
+ * - DB_SYNC otomatis false di production (mencegah data loss)
  */
+
+const env = process.env.NODE_ENV || 'development'
+const isProduction = env === 'production'
+
+/**
+ * Validate required env vars in production.
+ * Akan crash saat startup jika env penting tidak di-set.
+ */
+function requireEnv(key: string, defaultValue?: string): string {
+    const value = process.env[key] || defaultValue
+    if (!value && isProduction) {
+        throw new Error(`[CONFIG] Missing required environment variable: ${key}`)
+    }
+    return value || ''
+}
+
 export const config = {
     app: {
         port: Number(process.env.PORT) || 3000,
         appUrl: process.env.APP_URL || 'http://localhost:4000',
-        env: process.env.NODE_ENV || 'development',
-        jwtSecret: process.env.JWT_SECRET || 'supersecretkey',
-        jwtRefreshSecret: process.env.JWT_REFRESH_SECRET || 'superrefreshsecretkey',
-        apiKey: process.env.API_KEY || 'secretapikey',
+        env,
+        isProduction,
+        jwtSecret: requireEnv('JWT_SECRET', isProduction ? undefined : 'dev-jwt-secret-change-me'),
+        jwtRefreshSecret: requireEnv('JWT_REFRESH_SECRET', isProduction ? undefined : 'dev-jwt-refresh-secret-change-me'),
+        apiKey: requireEnv('API_KEY', isProduction ? undefined : 'dev-api-key-change-me'),
     },
     database: {
         type: (process.env.DB_TYPE || 'postgres') as 'postgres' | 'mysql',
@@ -18,7 +39,8 @@ export const config = {
         user: process.env.DB_USER || 'root',
         pass: process.env.DB_PASS || '',
         name: process.env.DB_NAME || 'hono_be',
-        sync: process.env.DB_SYNC === "true",
+        // SAFETY: synchronize SELALU false di production (gunakan migrations)
+        sync: isProduction ? false : process.env.DB_SYNC === "true",
     },
     mail: {
         host: process.env.SMTP_HOST || 'smtp.gmail.com',
@@ -40,4 +62,3 @@ export const config = {
         bucket: process.env.MINIO_BUCKET || 'hono-be',
     },
 }
-

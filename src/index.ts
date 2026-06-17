@@ -9,8 +9,12 @@ import { BaseException, ValidationException } from './core/exceptions/base'
 import { ZodError } from 'zod'
 import { config } from './config/config'
 import { logError } from './core/helpers/logger'
+import { requestLogger } from './core/middlewares/logger.middleware'
 
 const app = new Hono()
+
+// Request Logger
+app.use('*', requestLogger)
 
 // CORS
 app.use('*', cors({
@@ -22,6 +26,23 @@ app.use('*', cors({
 AppDataSource.initialize()
     .then(() => console.log("Database connected successfully"))
     .catch((err) => console.error("Database connection error", err))
+
+// Health Check (untuk load balancer, K8s, monitoring)
+app.get('/health', async (c) => {
+    const dbConnected = AppDataSource.isInitialized
+    const status = dbConnected ? 'healthy' : 'degraded'
+    const statusCode = dbConnected ? 200 : 503
+
+    return c.json({
+        status,
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        environment: config.app.env,
+        checks: {
+            database: dbConnected ? 'connected' : 'disconnected',
+        }
+    }, statusCode)
+})
 
 // Application Routes
 app.route('/api', api)
@@ -52,10 +73,10 @@ app.onError((err, c) => {
     // Log 500 errors to file
     logError(err, { method: c.req.method, path: c.req.path })
 
-    const errors = config.app.env !== "production" ? { 
+    const errors = config.app.isProduction ? null : { 
         message: err.message, 
         stack: err.stack 
-    } : null
+    }
 
     return ApiResponse.error(c, "Internal Server Error", 500, errors)
 })

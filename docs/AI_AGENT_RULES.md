@@ -114,8 +114,10 @@ Baca: [`MODULE_GUIDE.md`](./MODULE_GUIDE.md)
 | Error logging | `src/core/helpers/logger.ts` | logError() |
 | Auth middleware | `src/core/middlewares/auth.middleware.ts` | JWT Bearer |
 | API key middleware | `src/core/middlewares/api-key.middleware.ts` | x-api-key |
+| Request logger | `src/core/middlewares/logger.middleware.ts` | Log method, path, status, duration |
 | Route definitions | `src/routes/api.ts` | Semua route didefinisikan di sini |
-| Base repo interface | `src/core/interfaces/base.repository.interface.ts` | Interface dasar |
+| Base repo interface | `src/core/interfaces/base.repository.interface.ts` | Interface dasar CRUD |
+| Health check | `GET /health` | Status DB, uptime, environment |
 
 ---
 

@@ -6,6 +6,20 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [3.1.0] — 2026-06-17
+
+### Added
+- **Request Logger Middleware** — Log setiap request: method, path, status (color-coded), duration
+- **Health Check Endpoint** — `GET /health` mengembalikan status database, uptime, environment
+- `config.app.isProduction` — helper boolean untuk environment check
+
+### Changed
+- **[SECURITY]** JWT secrets (`JWT_SECRET`, `JWT_REFRESH_SECRET`, `API_KEY`) tidak lagi punya default value di production — server **crash saat startup** jika tidak di-set
+- **[SECURITY]** `DB_SYNC` otomatis `false` di production (hardcoded) — mencegah schema sync yang bisa menghancurkan data
+- `config.ts` — tambah `requireEnv()` utility untuk validasi env wajib
+
+---
+
 ## [3.0.0] — 2026-06-17
 
 ### Changed
