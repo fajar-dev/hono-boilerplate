@@ -15,6 +15,7 @@ import crypto from "crypto"
 import { mail } from "../../core/helpers/mail"
 import { UserService } from "../user/user.service"
 import { AuthHelper } from "../../core/helpers/auth"
+import { minio } from "../../core/helpers/minio"
 
 export class AuthService {
     constructor(
@@ -149,7 +150,7 @@ export class AuthService {
         user.name = data.name
         user.email = data.email
         if (data.photo !== undefined) {
-            user.photo = data.photo ?? undefined
+            user.photo = minio.sanitizePath(data.photo) ?? undefined
         }
 
         return await this.userService.save(user)

@@ -3,6 +3,7 @@ import { NotFoundException, BadRequestException } from "../../core/exceptions/ba
 import { EntityManager } from "typeorm"
 import { IUserRepository, UserListFilters } from "./interfaces/user.repository.interface"
 import { hashPassword } from "../../core/helpers/hash"
+import { minio } from "../../core/helpers/minio"
 
 export class UserService {
     constructor(private readonly repository: IUserRepository) {}
@@ -61,6 +62,9 @@ export class UserService {
         if (data.password) {
             data.password = await hashPassword(data.password)
         }
+        if (data.photo !== undefined) {
+            data.photo = minio.sanitizePath(data.photo) ?? undefined
+        }
         return await this.repository.save(data)
     }
 
@@ -74,6 +78,9 @@ export class UserService {
         }
         if (data.password) {
             data.password = await hashPassword(data.password)
+        }
+        if (data.photo !== undefined) {
+            data.photo = minio.sanitizePath(data.photo) ?? undefined
         }
         this.repository.merge(user, data)
         return await this.repository.save(user)

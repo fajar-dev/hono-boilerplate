@@ -472,6 +472,34 @@ describe("PUT /api/auth/profile", () => {
         expect(body.data.email).toBe("updatedprofile@example.com")
     })
 
+    test("should sanitize and accept absolute photo URLs to prevent nested paths", async () => {
+        const { headers } = await registerAndLogin(app)
+
+        // 1. Update profile with a relative photo path
+        const res1 = await request(app, "/api/auth/profile", {
+            method: "PUT",
+            headers,
+            body: { name: "Test User", email: "testphoto@example.com", photo: "users/abc.png" },
+        })
+        expect(res1.status).toBe(200)
+        expect(res1.body.data.photo).toContain("users/abc.png")
+        const absoluteUrl = res1.body.data.photo
+
+        // 2. Update profile using the returned absolute URL
+        const res2 = await request(app, "/api/auth/profile", {
+            method: "PUT",
+            headers,
+            body: { name: "Test User", email: "testphoto@example.com", photo: absoluteUrl },
+        })
+        expect(res2.status).toBe(200)
+        expect(res2.body.success).toBe(true)
+        
+        // 3. Verify it resolves to a single valid absolute URL, not double-nested
+        expect(res2.body.data.photo).toContain("users/abc.png")
+        const httpCount = (res2.body.data.photo.match(/http/g) || []).length
+        expect(httpCount).toBe(1)
+    })
+
     test("should fail with duplicate email", async () => {
         const { headers } = await registerAndLogin(app)
         

@@ -133,6 +133,32 @@ class MinioHelper {
             },
         })
     }
+
+    /**
+     * Extracts the relative path of an object from a full URL, or returns it as-is if already relative.
+     * Useful when clients submit absolute URLs containing presigned parameters back to the server.
+     */
+    sanitizePath(urlOrPath: string | null | undefined, bucket: string = BUCKET): string | null {
+        if (!urlOrPath) return null
+        if (!urlOrPath.startsWith('http://') && !urlOrPath.startsWith('https://')) {
+            return urlOrPath
+        }
+        try {
+            const parsed = new URL(urlOrPath)
+            const prefix = `/${bucket}/`
+            if (parsed.pathname.startsWith(prefix)) {
+                return parsed.pathname.substring(prefix.length)
+            }
+            // Fallback: check if the first path segment is the bucket name
+            const parts = parsed.pathname.split('/').filter(Boolean)
+            if (parts[0] === bucket) {
+                return parts.slice(1).join('/')
+            }
+            return parsed.pathname
+        } catch {
+            return urlOrPath
+        }
+    }
 }
 
 // Export a singleton instance
