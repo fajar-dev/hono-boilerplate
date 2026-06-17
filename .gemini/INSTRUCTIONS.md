@@ -164,6 +164,42 @@ routes.delete("/{resource}/:id", authMiddleware, (c) => xxxController.destroy(c)
 | File storage | `src/core/helpers/minio.ts` |
 | Routes | `src/routes/api.ts` |
 | Swagger | `swagger.yaml` |
+| Test setup | `test/setup.ts` |
+| Test helpers | `test/helpers.ts` |
+
+## Testing (WAJIB)
+
+Setiap perubahan **WAJIB** disertai test E2E.
+
+### Menjalankan Test
+
+```bash
+DB_TYPE=mysql bun test
+```
+
+### Checklist Testing untuk Fitur Baru
+
+```
+☐ Buat/update test file: test/{module}.test.ts
+☐ Tambahkan data factory di test/helpers.ts
+☐ Test: auth required (semua endpoint)
+☐ Test: create (success + validation errors)
+☐ Test: list (empty, data, pagination, search)
+☐ Test: show (success + 404)
+☐ Test: update (success + partial + 404)
+☐ Test: delete (success + 404 + verify deleted)
+☐ Test: full CRUD lifecycle
+☐ Update swagger.yaml
+☐ Update docs/CHANGELOG.md
+☐ Jalankan bun test → semua HARUS pass
+```
+
+### File Test yang Ada
+
+| File | Tests |
+|------|-------|
+| `test/auth.test.ts` | 28 test — register, login, refresh, me, logout, forgot/reset password |
+| `test/contact.test.ts` | 21 test — CRUD, auth, pagination, search, lifecycle |
 
 ## Dokumentasi Lengkap
 
@@ -173,6 +209,8 @@ Baca semua file di folder `docs/` untuk detail lebih lanjut:
 - `docs/MODULE_GUIDE.md` — Step-by-step membuat module
 - `docs/API_CONVENTIONS.md` — Standar API response & error
 - `docs/DATABASE_GUIDE.md` — Entity, repository, query patterns
+- `docs/TESTING_GUIDE.md` — Panduan testing lengkap + template
 - `docs/CHANGELOG.md` — Riwayat perubahan
 - `docs/ENVIRONMENT.md` — Environment variables & deployment
 - `docs/PROJECT_MAP.md` — Peta file & dependency graph
+

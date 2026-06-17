@@ -17,6 +17,7 @@ Dokumentasi lengkap untuk **Hono BE Backend Boilerplate** — panduan standarisa
 | 7 | [AI_AGENT_RULES.md](./AI_AGENT_RULES.md) | Aturan khusus untuk AI agent yang melanjutkan proyek |
 | 8 | [ENVIRONMENT.md](./ENVIRONMENT.md) | Panduan konfigurasi environment & deployment |
 | 9 | [PROJECT_MAP.md](./PROJECT_MAP.md) | Peta lengkap seluruh file dan dependensi antar file |
+| 10 | [TESTING_GUIDE.md](./TESTING_GUIDE.md) | Panduan E2E testing, template, dan konvensi |
 
 ---
 

@@ -59,8 +59,11 @@ Baca: [`MODULE_GUIDE.md`](./MODULE_GUIDE.md)
 ☐ Route ditambahkan di src/routes/api.ts
 ☐ Validator dibuat untuk setiap input endpoint
 ☐ Serializer dibuat untuk setiap output endpoint
-☐ Swagger spec diperbarui
-☐ Changelog diperbarui
+☐ Test E2E dibuat di test/{module}.test.ts
+☐ Data factory ditambahkan di test/helpers.ts
+☐ Swagger spec diperbarui (swagger.yaml)
+☐ Changelog diperbarui (docs/CHANGELOG.md)
+☐ Jalankan `bun test` dan pastikan semua pass
 ```
 
 ### Menambah Endpoint ke Module yang Ada
@@ -73,7 +76,9 @@ Baca: [`MODULE_GUIDE.md`](./MODULE_GUIDE.md)
 ☐ Buat/update validator jika ada input baru
 ☐ Update serializer jika ada output baru
 ☐ Tambahkan route di api.ts
+☐ Tambahkan test case di test/{module}.test.ts
 ☐ Update swagger.yaml
+☐ Jalankan `bun test` dan pastikan semua pass
 ```
 
 ### Menambah Field ke Entity yang Ada
@@ -85,7 +90,9 @@ Baca: [`MODULE_GUIDE.md`](./MODULE_GUIDE.md)
 ☐ Update service jika ada business logic baru
 ☐ Update validator (Create dan Update)
 ☐ Update serializer
+☐ Update test yang terkait
 ☐ Update swagger.yaml schemas
+☐ Jalankan `bun test` dan pastikan semua pass
 ```
 
 ---
@@ -323,9 +330,29 @@ Saat membuat perubahan, **WAJIB** update file dokumentasi terkait:
 
 | Perubahan | File yang Diupdate |
 |-----------|--------------------|
-| Module baru | `CHANGELOG.md`, `ARCHITECTURE.md` (tabel module) |
-| Endpoint baru | `CHANGELOG.md`, `swagger.yaml` |
-| Entity baru/modifikasi | `CHANGELOG.md`, `DATABASE_GUIDE.md` |
+| Module baru | `CHANGELOG.md`, `ARCHITECTURE.md`, `swagger.yaml`, `test/{module}.test.ts`, `test/helpers.ts` |
+| Endpoint baru | `CHANGELOG.md`, `swagger.yaml`, `test/{module}.test.ts` |
+| Entity baru/modifikasi | `CHANGELOG.md`, `DATABASE_GUIDE.md`, test terkait |
 | Helper/middleware baru | `CHANGELOG.md`, `ARCHITECTURE.md` (tabel infra) |
 | Environment variable baru | `CHANGELOG.md`, `ENVIRONMENT.md`, `.env.dist` |
 | Breaking change | `CHANGELOG.md` (major version bump) |
+
+---
+
+## 🧪 Testing
+
+Setiap perubahan **WAJIB** disertai test. Baca: [`TESTING_GUIDE.md`](./TESTING_GUIDE.md)
+
+### Menjalankan Test
+
+```bash
+DB_TYPE=mysql bun test
+```
+
+### Aturan Testing
+
+1. **SELALU** buat test E2E untuk setiap module/endpoint baru
+2. **SELALU** jalankan `bun test` sebelum commit dan pastikan **semua pass**
+3. Test file: `test/{module}.test.ts`
+4. Data factory: `test/helpers.ts`
+5. Test menggunakan database terpisah (`hono_be_test`)

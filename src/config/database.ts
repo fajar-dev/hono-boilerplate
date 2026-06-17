@@ -6,9 +6,12 @@ import { config } from "./config"
 
 /**
  * TypeORM Database Configuration
- * Uses centralized config from config.ts
+ * 
+ * Access via `AppDataSource` (default) atau `getDataSource()`.
+ * Untuk testing, gunakan `setDataSource()` untuk override ke test database.
  */
-export const AppDataSource = new DataSource({
+
+const defaultDataSource = new DataSource({
     type: config.database.type,
     host: config.database.host,
     port: config.database.port,
@@ -19,4 +22,37 @@ export const AppDataSource = new DataSource({
     entities: [User, Contact],
     migrations: [],
     subscribers: [],
+})
+
+let activeDataSource: DataSource = defaultDataSource
+
+/** Get the active DataSource (default or test-overridden) */
+export function getDataSource(): DataSource {
+    return activeDataSource
+}
+
+/** Override DataSource for testing */
+export function setDataSource(ds: DataSource): void {
+    activeDataSource = ds
+}
+
+/** Reset to default DataSource */
+export function resetDataSource(): void {
+    activeDataSource = defaultDataSource
+}
+
+/**
+ * Backward-compatible export.
+ * Modules yang sudah import `AppDataSource` tetap bekerja.
+ * Proxy mendelegasikan semua akses ke activeDataSource.
+ */
+export const AppDataSource = new Proxy({} as DataSource, {
+    get(_target, prop: string | symbol) {
+        const value = (activeDataSource as any)[prop]
+        // Bind methods ke DataSource asli agar `this` benar
+        if (typeof value === "function") {
+            return value.bind(activeDataSource)
+        }
+        return value
+    },
 })
