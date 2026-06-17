@@ -11,10 +11,11 @@ services:
       - PORT=4000
       - ENV=${ENV:-production}
       - APP_URL=${APP_URL}
+      - DB_TYPE=${DB_TYPE:-postgres}
       - DB_HOST=db
-      - DB_PORT=3306
-      - DB_USER=${DB_USER:-root}
-      - DB_PASS=${DB_PASS:-root}
+      - DB_PORT=5432
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASS=${DB_PASS:-postgres}
       - DB_NAME=${DB_NAME:-hono_be}
       - DB_SYNC=${DB_SYNC:-false}
       - SMTP_HOST=${SMTP_HOST}
@@ -40,20 +41,19 @@ services:
       - hono-be-network
 
   db:
-    image: mysql:8.0
+    image: postgres:16-alpine
     container_name: hono-be-db
     restart: always
     environment:
-      - MYSQL_ROOT_PASSWORD=${DB_PASS:-root}
-      - MYSQL_DATABASE=${DB_NAME:-hono_be}
-      - MYSQL_USER=${DB_USER:-hono_user}
-      - MYSQL_PASSWORD=${DB_PASS:-root}
+      - POSTGRES_USER=${DB_USER:-postgres}
+      - POSTGRES_PASSWORD=${DB_PASS:-postgres}
+      - POSTGRES_DB=${DB_NAME:-hono_be}
     ports:
-      - "${DB_PORT:-3306}:3306"
+      - "${DB_PORT:-5432}:5432"
     volumes:
-      - mysql_data:/var/lib/mysql
+      - pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
       timeout: 10s
       retries: 5
     networks:
@@ -64,4 +64,4 @@ networks:
     driver: bridge
 
 volumes:
-  mysql_data:
+  pg_data:

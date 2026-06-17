@@ -12,8 +12,9 @@ export const config = {
         apiKey: process.env.API_KEY || 'secretapikey',
     },
     database: {
+        type: (process.env.DB_TYPE || 'postgres') as 'postgres' | 'mysql',
         host: process.env.DB_HOST || '127.0.0.1',
-        port: Number(process.env.DB_PORT) || 3306,
+        port: Number(process.env.DB_PORT) || 5432,
         user: process.env.DB_USER || 'root',
         pass: process.env.DB_PASS || '',
         name: process.env.DB_NAME || 'hono_be',

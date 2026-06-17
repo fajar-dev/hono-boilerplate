@@ -9,7 +9,7 @@ import { config } from "./config"
  * Uses centralized config from config.ts
  */
 export const AppDataSource = new DataSource({
-    type: "mysql",
+    type: config.database.type,
     host: config.database.host,
     port: config.database.port,
     username: config.database.user,
@@ -19,9 +19,4 @@ export const AppDataSource = new DataSource({
     entities: [User, Contact],
     migrations: [],
     subscribers: [],
-    connectorPackage: "mysql2",
-    charset: "utf8mb4_unicode_ci",
-    extra: {
-        multipleStatements: true
-    }
 })
