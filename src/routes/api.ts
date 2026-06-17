@@ -3,7 +3,7 @@ import { zValidator } from "@hono/zod-validator"
 import crypto from "crypto"
 
 // ── Validators ──────────────────────────────────────────────────────────────
-import { RegisterValidator, LoginValidator, ForgotPasswordValidator, ResetPasswordValidator, RefreshTokenValidator, GoogleLoginValidator } from "../modules/auth/validators/auth.validator"
+import { RegisterValidator, LoginValidator, ForgotPasswordValidator, ResetPasswordValidator, RefreshTokenValidator, GoogleLoginValidator, UpdateProfileValidator, UpdatePasswordValidator } from "../modules/auth/validators/auth.validator"
 import { CreateContactValidator, UpdateContactValidator } from "../modules/contact/validators/contact.validator"
 import { CreateUserValidator, UpdateUserValidator } from "../modules/user/validators/user.validator"
 
@@ -29,6 +29,8 @@ routes.get("/auth/validate-reset-token", (c) => authController.validateResetToke
 routes.post("/auth/reset-password", zValidator("json", ResetPasswordValidator, validationHook), (c) => authController.resetPassword(c))
 routes.post("/auth/refresh", zValidator("json", RefreshTokenValidator, validationHook), (c) => authController.refreshToken(c))
 routes.get("/auth/me", authMiddleware, (c) => authController.me(c))
+routes.put("/auth/profile", authMiddleware, zValidator("json", UpdateProfileValidator, validationHook), (c) => authController.updateProfile(c))
+routes.put("/auth/password", authMiddleware, zValidator("json", UpdatePasswordValidator, validationHook), (c) => authController.updatePassword(c))
 routes.post("/auth/logout", authMiddleware, (c) => authController.logout(c))
 
 // Contact

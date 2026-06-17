@@ -135,4 +135,42 @@ export class AuthService {
     async logout(_user: User) {
         return true
     }
+
+    async updateProfile(userId: number, data: { name: string; email: string; photo?: string | null }) {
+        const user = await this.userService.getById(userId)
+        
+        if (data.email && data.email !== user.email) {
+            const existing = await this.userService.getByEmail(data.email)
+            if (existing) {
+                throw new BadRequestException("Email already in use")
+            }
+        }
+
+        user.name = data.name
+        user.email = data.email
+        if (data.photo !== undefined) {
+            user.photo = data.photo ?? undefined
+        }
+
+        return await this.userService.save(user)
+    }
+
+    async updatePassword(userId: number, data: { oldPassword?: string; newPassword: string }) {
+        const user = await this.userService.getById(userId)
+        const userWithPassword = await this.userService.getByEmailWithPassword(user.email)
+        
+        if (userWithPassword && userWithPassword.password) {
+            if (!data.oldPassword) {
+                throw new BadRequestException("Old password is required")
+            }
+            const isValid = await comparePassword(data.oldPassword, userWithPassword.password)
+            if (!isValid) {
+                throw new BadRequestException("Invalid old password")
+            }
+        }
+
+        user.password = await hashPassword(data.newPassword)
+        await this.userService.save(user)
+        return true
+    }
 }

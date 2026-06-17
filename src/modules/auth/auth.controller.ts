@@ -10,14 +10,16 @@ export class AuthController {
     async register(c: Context) {
         const body = c.req.valid("json" as never)
         const user = await this.service.register(body)
-        return ApiResponse.success(c, AuthSerializer.single(user), "User registered successfully", 201)
+        const serialized = await AuthSerializer.single(user)
+        return ApiResponse.success(c, serialized, "User registered successfully", 201)
     }
 
     async login(c: Context) {
         const body = c.req.valid("json" as never)
         const data = await this.service.login(body)
+        const serializedUser = await AuthSerializer.single(data.user)
         return ApiResponse.success(c, {
-            user: AuthSerializer.single(data.user),
+            user: serializedUser,
             accessToken: data.accessToken,
             refreshToken: data.refreshToken,
         }, "Logged in successfully")
@@ -26,8 +28,9 @@ export class AuthController {
     async google(c: Context) {
         const body = c.req.valid("json" as never)
         const data = await this.service.googleLogin(body)
+        const serializedUser = await AuthSerializer.single(data.user)
         return ApiResponse.success(c, {
-            user: AuthSerializer.single(data.user),
+            user: serializedUser,
             accessToken: data.accessToken,
             refreshToken: data.refreshToken
         }, 'Logged in successfully')
@@ -36,8 +39,9 @@ export class AuthController {
     async refreshToken(c: Context) {
         const body = c.req.valid("json" as never)
         const tokens = await this.service.refreshToken(body)
+        const serializedUser = await AuthSerializer.single(tokens.user)
         return ApiResponse.success(c, {
-            user: AuthSerializer.single(tokens.user),
+            user: serializedUser,
             accessToken: tokens.accessToken,
             refreshToken: tokens.refreshToken,
         }, "Token refreshed successfully")
@@ -45,7 +49,8 @@ export class AuthController {
 
     async me(c: Context) {
         const user = c.get("user")
-        return ApiResponse.success(c, AuthSerializer.single(user), "User profile retrieved successfully")
+        const serialized = await AuthSerializer.single(user)
+        return ApiResponse.success(c, serialized, "User profile retrieved successfully")
     }
 
     async logout(c: Context) {
@@ -73,5 +78,20 @@ export class AuthController {
         const body = c.req.valid("json" as never)
         await this.service.resetPassword(body)
         return ApiResponse.success(c, null, "Password has been successfully reset")
+    }
+
+    async updateProfile(c: Context) {
+        const user = c.get("user")
+        const body = c.req.valid("json" as never)
+        const updatedUser = await this.service.updateProfile(user.id, body)
+        const serialized = await AuthSerializer.single(updatedUser)
+        return ApiResponse.success(c, serialized, "Profile updated successfully")
+    }
+
+    async updatePassword(c: Context) {
+        const user = c.get("user")
+        const body = c.req.valid("json" as never)
+        await this.service.updatePassword(user.id, body)
+        return ApiResponse.success(c, null, "Password updated successfully")
     }
 }

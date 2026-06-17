@@ -448,3 +448,91 @@ describe("Full Auth Flow", () => {
         expect(logoutRes.status).toBe(200)
     })
 })
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PUT /api/auth/profile
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("PUT /api/auth/profile", () => {
+    test("should update profile details successfully", async () => {
+        const { headers } = await registerAndLogin(app)
+
+        const { status, body } = await request(app, "/api/auth/profile", {
+            method: "PUT",
+            headers,
+            body: { name: "Updated Profile Name", email: "updatedprofile@example.com" },
+        })
+
+        expect(status).toBe(200)
+        expect(body.success).toBe(true)
+        expect(body.message).toBe("Profile updated successfully")
+        expect(body.data.name).toBe("Updated Profile Name")
+        expect(body.data.email).toBe("updatedprofile@example.com")
+    })
+
+    test("should fail with duplicate email", async () => {
+        const { headers } = await registerAndLogin(app)
+        
+        // register user 2
+        const user2Data = createUserData()
+        await request(app, "/api/auth/register", { method: "POST", body: user2Data })
+
+        // try to change user 1's email to user 2's email
+        const { status, body } = await request(app, "/api/auth/profile", {
+            method: "PUT",
+            headers,
+            body: { name: "Updated Name", email: user2Data.email },
+        })
+
+        expect(status).toBe(400)
+        expect(body.success).toBe(false)
+        expect(body.message).toBe("Email already in use")
+    })
+})
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PUT /api/auth/password
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("PUT /api/auth/password", () => {
+    test("should update password successfully when old password matches", async () => {
+        const { headers } = await registerAndLogin(app)
+
+        const { status, body } = await request(app, "/api/auth/password", {
+            method: "PUT",
+            headers,
+            body: { oldPassword: "password123", newPassword: "newsecurepassword" },
+        })
+
+        expect(status).toBe(200)
+        expect(body.success).toBe(true)
+        expect(body.message).toBe("Password updated successfully")
+    })
+
+    test("should fail to update password when old password does not match", async () => {
+        const { headers } = await registerAndLogin(app)
+
+        const { status, body } = await request(app, "/api/auth/password", {
+            method: "PUT",
+            headers,
+            body: { oldPassword: "wrongpassword", newPassword: "newsecurepassword" },
+        })
+
+        expect(status).toBe(400)
+        expect(body.success).toBe(false)
+        expect(body.message).toBe("Invalid old password")
+    })
+
+    test("should fail validation with short password", async () => {
+        const { headers } = await registerAndLogin(app)
+
+        const { status, body } = await request(app, "/api/auth/password", {
+            method: "PUT",
+            headers,
+            body: { oldPassword: "password123", newPassword: "123" },
+        })
+
+        expect(status).toBe(422)
+        expect(body.success).toBe(false)
+    })
+})

@@ -157,6 +157,21 @@ components:
         photo: { type: string, nullable: true, example: "users/abc-123.png" }
         isActive: { type: boolean, example: true }
 
+    UpdateProfileRequest:
+      type: object
+      required: [name, email]
+      properties:
+        name: { type: string, example: "Budi Santoso" }
+        email: { type: string, format: email, example: "budi@example.com" }
+        photo: { type: string, nullable: true, example: "users/abc-123.png" }
+
+    UpdatePasswordRequest:
+      type: object
+      required: [newPassword]
+      properties:
+        oldPassword: { type: string, example: "oldSecret123" }
+        newPassword: { type: string, minLength: 6, example: "newSecret123" }
+
 paths:
   # ── Register ──────────────────────────────────────────────────────────────
   /auth/register:
@@ -328,6 +343,53 @@ paths:
                     properties:
                       data: { $ref: "#/components/schemas/AuthUser" }
         "401": { description: Unauthorized }
+
+  /auth/profile:
+    put:
+      tags: [Auth]
+      summary: Update current user's profile details
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UpdateProfileRequest" }
+      responses:
+        "200":
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BaseResponse"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/AuthUser" }
+        "400": { description: Email already in use }
+        "401": { description: Unauthorized }
+        "422": { description: Validation error }
+
+  /auth/password:
+    put:
+      tags: [Auth]
+      summary: Update current user's password
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UpdatePasswordRequest" }
+      responses:
+        "200":
+          description: Password updated successfully
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BaseResponse" }
+        "400": { description: Invalid old password / Old password required }
+        "401": { description: Unauthorized }
+        "422": { description: Validation error }
 
   # ── Logout ───────────────────────────────────────────────────────────────
   /auth/logout:

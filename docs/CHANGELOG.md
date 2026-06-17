@@ -6,6 +6,16 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [3.3.0] — 2026-06-17
+
+### Added
+- **Profile Update Endpoint** — `PUT /api/auth/profile` allowing users to update their name, email, and photo path, fully checking for email uniqueness.
+- **Password Settings Endpoint** — `PUT /api/auth/password` allowing setting a password (useful for passwordless Google Login accounts) or updating an existing password after verifying the old password.
+- **Async AuthSerializer** — Converted `AuthSerializer.single` and `AuthSerializer.collection` to be asynchronous to resolve MinIO presigned avatar URLs for logged in users.
+- Swagger documentation and E2E integration tests in `auth.test.ts` for profile & password features.
+
+---
+
 ## [3.2.0] — 2026-06-17
 
 ### Added
