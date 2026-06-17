@@ -13,7 +13,7 @@ export class UserSerializer {
             name: user.name,
             photo: await this.resolvePhotoUrl(user.photo),
             email: user.email,
-            isActive: user.isActive,
+            isActive: Boolean(user.isActive),
             createdAt: user.createdAt
         }
     }

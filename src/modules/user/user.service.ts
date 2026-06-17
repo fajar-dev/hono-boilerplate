@@ -1,13 +1,14 @@
 import { User } from "./entities/user.entity"
-import { NotFoundException } from "../../core/exceptions/base"
+import { NotFoundException, BadRequestException } from "../../core/exceptions/base"
 import { EntityManager } from "typeorm"
 import { IUserRepository, UserListFilters } from "./interfaces/user.repository.interface"
+import { hashPassword } from "../../core/helpers/hash"
 
 export class UserService {
     constructor(private readonly repository: IUserRepository) {}
 
-    async getAll(page: number, limit: number, q: string, sort: string, order: string, filters: UserListFilters = {}): Promise<{ data: any[]; total: number }> {
-        return await this.repository.findAll(page, limit, q, sort, order, filters)
+    async getAll(page: number, limit: number, q: string, filters: UserListFilters = {}): Promise<{ data: any[]; total: number }> {
+        return await this.repository.findAll(page, limit, q, filters)
     }
 
     async getById(id: number): Promise<User> {
@@ -40,5 +41,38 @@ export class UserService {
 
     async saveInTransaction(data: Partial<User>): Promise<User> {
         return await this.repository.saveInTransaction(data)
+    }
+
+    async create(data: Partial<User>): Promise<User> {
+        if (data.email) {
+            const existing = await this.repository.findByEmail(data.email)
+            if (existing) {
+                throw new BadRequestException("Email already in use")
+            }
+        }
+        if (data.password) {
+            data.password = await hashPassword(data.password)
+        }
+        return await this.repository.save(data)
+    }
+
+    async update(id: number, data: Partial<User>): Promise<User> {
+        const user = await this.getById(id)
+        if (data.email && data.email !== user.email) {
+            const existing = await this.repository.findByEmail(data.email)
+            if (existing) {
+                throw new BadRequestException("Email already in use")
+            }
+        }
+        if (data.password) {
+            data.password = await hashPassword(data.password)
+        }
+        this.repository.merge(user, data)
+        return await this.repository.save(user)
+    }
+
+    async delete(id: number): Promise<void> {
+        await this.getById(id)
+        await this.repository.delete(id)
     }
 }

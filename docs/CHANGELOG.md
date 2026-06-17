@@ -6,6 +6,21 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [3.2.0] — 2026-06-17
+
+### Added
+- **User Management Module (CRUD)** — Expose full CRUD capabilities for managing users:
+  - `UserController` with methods: `index`, `show`, `store`, `update`, `destroy`.
+  - Zod schemas `CreateUserValidator` and `UpdateUserValidator`.
+  - Repository and Service extension for delete logic.
+  - Endpoints: `GET /user`, `GET /user/:id`, `POST /user`, `PUT /user/:id`, `DELETE /user/:id`.
+  - Protected all user endpoints using `authMiddleware`.
+- **MinIO File Upload Endpoint** — `POST /api/upload` endpoint allowing authenticated multipart file uploads to MinIO.
+- Swagger API documentation for user CRUD and upload endpoints.
+- Integration E2E tests for user endpoints and file uploading (18 tests).
+
+---
+
 ## [3.1.0] — 2026-06-17
 
 ### Added
