@@ -8,6 +8,7 @@ import { ApiResponse } from './core/helpers/response'
 import { BaseException, ValidatorException } from './core/exceptions/base'
 import { ZodError } from 'zod'
 import { config } from './config/config'
+import { logError } from './core/helpers/logger'
 
 const app = new Hono()
 
@@ -45,11 +46,11 @@ app.onError((err, c) => {
     }
 
     if (err instanceof BaseException) {
-        console.error(`[Exception] ${err.status} - ${err.message}`)
         return ApiResponse.error(c, err.message, err.status, err.context)
     }
 
-    console.error("error: ", err.message)
+    // Log 500 errors to file
+    logError(err, { method: c.req.method, path: c.req.path })
 
     const errors = config.app.env !== "production" ? { 
         message: err.message, 
