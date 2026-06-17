@@ -1,6 +1,7 @@
 import "reflect-metadata"
 import { DataSource } from "typeorm"
 import { User } from "../modules/user/entities/user.entity"
+import { Contact } from "../modules/contact/entities/contact.entity"
 import { config } from "./config"
 
 /**
@@ -15,7 +16,7 @@ export const AppDataSource = new DataSource({
     password: config.database.pass,
     database: config.database.name,
     synchronize: config.database.sync,
-    entities: [User],
+    entities: [User, Contact],
     migrations: [],
     subscribers: [],
     connectorPackage: "mysql2",

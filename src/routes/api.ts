@@ -3,6 +3,7 @@ import { zValidator } from "@hono/zod-validator"
 
 // ── Validators ──────────────────────────────────────────────────────────────
 import { RegisterValidator, LoginValidator, ForgotPasswordValidator, ResetPasswordValidator, RefreshTokenValidator, GoogleLoginSchema } from "../modules/auth/validators/auth.validator"
+import { CreateContactValidator, UpdateContactValidator } from "../modules/contact/validators/contact.validator"
 
 // ── Middlewares ──────────────────────────────────────────────────────────────
 import { authMiddleware } from "../core/middlewares/auth.middleware"
@@ -10,6 +11,7 @@ import { validationHook } from "../core/helpers/validator"
 
 // ── Modules (controllers wired with their dependencies) ──────────────────────
 import { authController } from "../modules/auth/auth.module"
+import { contactController } from "../modules/contact/contact.module"
 
 // ── Routes ───────────────────────────────────────────────────────────────────
 const routes = new Hono()
@@ -24,6 +26,13 @@ routes.post("/auth/reset-password", zValidator("json", ResetPasswordValidator, v
 routes.post("/auth/refresh", zValidator("json", RefreshTokenValidator, validationHook), (c) => authController.refreshToken(c))
 routes.get("/auth/me", authMiddleware, (c) => authController.me(c))
 routes.post("/auth/logout", authMiddleware, (c) => authController.logout(c))
+
+// Contact
+routes.get("/contact", authMiddleware, (c) => contactController.index(c))
+routes.get("/contact/:id", authMiddleware, (c) => contactController.show(c))
+routes.post("/contact", authMiddleware, zValidator("json", CreateContactValidator, validationHook), (c) => contactController.store(c))
+routes.put("/contact/:id", authMiddleware, zValidator("json", UpdateContactValidator, validationHook), (c) => contactController.update(c))
+routes.delete("/contact/:id", authMiddleware, (c) => contactController.destroy(c))
 
 // Proxy MinIO
 routes.get("/proxy", async (c) => {

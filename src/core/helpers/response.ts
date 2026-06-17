@@ -10,7 +10,7 @@ export class ApiResponse {
     static success<T>(
         c: Context, 
         data: T, 
-        message: string = "Validator successful", 
+        message: string = "Success", 
         status: number = 200, 
         meta?: any
     ) {
@@ -29,7 +29,7 @@ export class ApiResponse {
         total: number,
         page: number,
         limit: number,
-        message: string = "Validator successful"
+        message: string = "Success"
     ) {
         const lastPage = Math.ceil(total / limit)
         
