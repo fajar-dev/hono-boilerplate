@@ -1,4 +1,3 @@
-import { AppDataSource } from "../../config/database"
 import { User } from "../user/entities/user.entity"
 import {
     RegisterValidator,
@@ -14,7 +13,6 @@ import { verify } from "hono/jwt"
 import { config } from "../../config/config"
 import crypto from "crypto"
 import { mail } from "../../core/helpers/mail"
-import { EntityManager } from "typeorm"
 import { UserService } from "../user/user.service"
 import { AuthHelper } from "../../core/helpers/auth"
 
@@ -31,11 +29,10 @@ export class AuthService {
             }
         }
 
-        return AppDataSource.transaction(async (manager: EntityManager) => {
-            return await this.userService.save(
-                { ...data, password: await hashPassword(data.password) },
-                manager
-            )
+        // Transaction dikelola di repository layer (bukan service)
+        return await this.userService.saveInTransaction({
+            ...data,
+            password: await hashPassword(data.password),
         })
     }
 
@@ -52,8 +49,8 @@ export class AuthService {
         }
 
         const { accessToken, refreshToken } = await AuthHelper.generateTokens(user)
-        const { password, resetPasswordToken, resetPasswordExpires, ...safeUser } = user as any
-        return { user: safeUser, accessToken, refreshToken }
+        // Biarkan controller+serializer yang strip sensitive data
+        return { user, accessToken, refreshToken }
     }
 
     async login(data: LoginValidator) {
@@ -76,9 +73,8 @@ export class AuthService {
         }
 
         const { accessToken, refreshToken } = await AuthHelper.generateTokens(user)
-
-        const { password, resetPasswordToken, resetPasswordExpires, ...safeUser } = user
-        return { user: safeUser, accessToken, refreshToken }
+        // Biarkan controller+serializer yang strip sensitive data
+        return { user, accessToken, refreshToken }
     }
 
     async refreshToken(data: RefreshTokenValidator) {

@@ -18,7 +18,7 @@ export const config = {
         user: process.env.DB_USER || 'root',
         pass: process.env.DB_PASS || '',
         name: process.env.DB_NAME || 'hono_be',
-        sync: Boolean(process.env.DB_SYNC) || false,
+        sync: process.env.DB_SYNC === "true",
     },
     mail: {
         host: process.env.SMTP_HOST || 'smtp.gmail.com',

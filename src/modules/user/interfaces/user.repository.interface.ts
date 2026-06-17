@@ -13,5 +13,6 @@ export interface IUserRepository {
     findByResetToken(token: string): Promise<User | null>
     findByEmailAndResetToken(email: string, token: string): Promise<User | null>
     save(data: Partial<User>, manager?: EntityManager): Promise<User>
+    saveInTransaction(data: Partial<User>): Promise<User>
     merge(entity: User, data: Partial<User>): User
 }

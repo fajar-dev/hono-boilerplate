@@ -5,7 +5,7 @@ import { serveStatic } from 'hono/bun'
 import { swaggerUI } from '@hono/swagger-ui'
 import api from './routes/api'
 import { ApiResponse } from './core/helpers/response'
-import { BaseException, ValidatorException } from './core/exceptions/base'
+import { BaseException, ValidationException } from './core/exceptions/base'
 import { ZodError } from 'zod'
 import { config } from './config/config'
 import { logError } from './core/helpers/logger'
@@ -41,7 +41,7 @@ app.get('/api/uploads/*', (c, next) => {
 // Global Error Handler
 app.onError((err, c) => {
     if (err instanceof ZodError) {
-        const valErr = new ValidatorException(err)
+        const valErr = new ValidationException(err)
         return ApiResponse.error(c, valErr.message, valErr.status, valErr.context)
     }
 

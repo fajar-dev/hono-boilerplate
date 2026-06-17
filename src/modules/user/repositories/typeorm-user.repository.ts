@@ -33,10 +33,8 @@ export class TypeOrmUserRepository implements IUserRepository {
             query.andWhere("user.is_active = :isActive", { isActive: filters.isActive === "1" })
         }
 
-        // Get total count
-        const countQuery = query.clone()
-        const totalResult = await countQuery.getRawMany()
-        const total = totalResult.length
+        // Get total count (efficient)
+        const total = await query.clone().getCount()
 
         // Sort
         const sortMap: Record<string, string> = {
@@ -95,5 +93,11 @@ export class TypeOrmUserRepository implements IUserRepository {
 
     merge(entity: User, data: Partial<User>): User {
         return this.repository.merge(entity, data)
+    }
+
+    async saveInTransaction(data: Partial<User>): Promise<User> {
+        return AppDataSource.transaction(async (manager) => {
+            return await manager.getRepository(User).save(data)
+        })
     }
 }

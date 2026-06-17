@@ -6,6 +6,37 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [3.0.0] — 2026-06-17
+
+### Changed
+- **[BREAKING]** `ValidatorException` → `ValidationException`
+- **[BREAKING]** `TooManyValidatorsException` → `TooManyRequestsException`
+- **[BREAKING]** `GoogleLoginSchema` → `GoogleLoginValidator` (konsistensi naming)
+- `AuthController` — semua method menggunakan `c.req.valid()` (sebelumnya `c.req.json()` bypass validasi)
+- `AuthService` — tidak lagi import `AppDataSource`, transaction dipindah ke repository layer
+- `AuthService` — tidak lagi melakukan manual destructuring sensitive fields (serializer yang handle)
+- `IBaseRepository` — ditambahkan method standar: `findById`, `save`, `merge`, `delete`
+- `IContactRepository` — sekarang extends `IBaseRepository<Contact>`
+- `TypeOrmUserRepository.findAll()` — `getRawMany().length` → `getCount()` (performa)
+- `config.database.sync` — fix bug `Boolean("false")` yang return `true`
+- `AppDataSource` — refactored ke Proxy + getter/setter pattern untuk testability
+
+### Added
+- `UserService.saveInTransaction()` — transaction dikelola di repository layer
+- `TypeOrmUserRepository.saveInTransaction()` — implementation
+- `AuthSerializer.collection()` — konsistensi dengan ContactSerializer
+- E2E integration tests (49 tests, 180 assertions)
+- `docs/TESTING_GUIDE.md` — panduan testing lengkap
+
+### Removed
+- `AuthSerializer.resolvePhotoUrl()` — dead code
+- Unused `ZodError` import di `response.ts`
+
+### Fixed
+- Exception default messages: "Bad Validator" → "Bad Request", "Validatored resource not found" → "Resource not found"
+
+---
+
 ## [2.0.0] — 2026-06-17
 
 ### Added

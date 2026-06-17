@@ -1,10 +1,10 @@
-import { ValidatorException } from "../exceptions/base"
+import { ValidationException } from "../exceptions/base"
 /**
  * Standard Zod validation hook for Hono/zValidator.
- * Automatically throws a ValidatorException if validation fails.
+ * Automatically throws a ValidationException if validation fails.
  */
 export const validationHook = (result: any) => {
     if (!result.success) {
-        throw new ValidatorException(result.error)
+        throw new ValidationException(result.error)
     }
 }

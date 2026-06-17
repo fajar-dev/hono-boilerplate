@@ -104,7 +104,7 @@ Baca: [`MODULE_GUIDE.md`](./MODULE_GUIDE.md)
 | Konfigurasi env | `src/config/config.ts` | Satu-satunya tempat akses env |
 | Database DataSource | `src/config/database.ts` | Daftarkan entity baru di sini |
 | SMTP transporter | `src/config/smtp.ts` | Konfigurasi email |
-| Exception classes | `src/core/exceptions/base.ts` | Extend BaseException untuk kasus baru |
+| Exception classes | `src/core/exceptions/base.ts` | `BaseException` hierarchy (400, 401, 403, 404, 409, 422, 429) |
 | Response format | `src/core/helpers/response.ts` | ApiResponse.success / paginate / error |
 | Validation hook | `src/core/helpers/validator.ts` | validationHook untuk zValidator |
 | JWT & Auth | `src/core/helpers/auth.ts` | AuthHelper.generateTokens |

@@ -1,6 +1,5 @@
 import { Context } from "hono"
 import { ContentfulStatusCode } from "hono/utils/http-status"
-import { ZodError } from "zod"
 
 /**
  * Standard API Response Formatter (Best Practice)

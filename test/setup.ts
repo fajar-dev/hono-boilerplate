@@ -5,7 +5,7 @@ import { DataSource } from "typeorm"
 import { User } from "../src/modules/user/entities/user.entity"
 import { Contact } from "../src/modules/contact/entities/contact.entity"
 import { ApiResponse } from "../src/core/helpers/response"
-import { BaseException, ValidatorException } from "../src/core/exceptions/base"
+import { BaseException, ValidationException } from "../src/core/exceptions/base"
 import { ZodError } from "zod"
 import { config } from "../src/config/config"
 import { setDataSource } from "../src/config/database"
@@ -91,7 +91,7 @@ export function createTestApp(): Hono {
     // Global Error Handler (matches production)
     app.onError((err, c) => {
         if (err instanceof ZodError) {
-            const valErr = new ValidatorException(err)
+            const valErr = new ValidationException(err)
             return ApiResponse.error(c, valErr.message, valErr.status, valErr.context)
         }
 

@@ -37,4 +37,8 @@ export class UserService {
     async save(data: Partial<User>, manager?: EntityManager): Promise<User> {
         return await this.repository.save(data, manager)
     }
+
+    async saveInTransaction(data: Partial<User>): Promise<User> {
+        return await this.repository.saveInTransaction(data)
+    }
 }

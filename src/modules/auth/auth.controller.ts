@@ -1,14 +1,6 @@
 import { Context } from "hono"
 import { AuthService } from "./auth.service"
 import { ApiResponse } from "../../core/helpers/response"
-import {
-    RegisterValidator,
-    LoginValidator,
-    ForgotPasswordValidator,
-    ResetPasswordValidator,
-    RefreshTokenValidator,
-    GoogleLoginValidator,
-} from "./validators/auth.validator"
 import { AuthSerializer } from "./serializers/auth.serialize"
 import { BadRequestException } from "../../core/exceptions/base"
 
@@ -16,36 +8,36 @@ export class AuthController {
     constructor(private readonly service: AuthService) {}
 
     async register(c: Context) {
-        const body = await c.req.json() as RegisterValidator
+        const body = c.req.valid("json" as never)
         const user = await this.service.register(body)
         return ApiResponse.success(c, AuthSerializer.single(user), "User registered successfully", 201)
     }
 
     async login(c: Context) {
-        const body = await c.req.json() as LoginValidator
+        const body = c.req.valid("json" as never)
         const data = await this.service.login(body)
         return ApiResponse.success(c, {
-            user: AuthSerializer.single(data.user as any),
+            user: AuthSerializer.single(data.user),
             accessToken: data.accessToken,
             refreshToken: data.refreshToken,
         }, "Logged in successfully")
     }
 
     async google(c: Context) {
-        const body = await c.req.json() as GoogleLoginValidator
+        const body = c.req.valid("json" as never)
         const data = await this.service.googleLogin(body)
         return ApiResponse.success(c, {
-            user: AuthSerializer.single(data.user as any),
+            user: AuthSerializer.single(data.user),
             accessToken: data.accessToken,
             refreshToken: data.refreshToken
         }, 'Logged in successfully')
     }
 
     async refreshToken(c: Context) {
-        const body = await c.req.json() as RefreshTokenValidator
+        const body = c.req.valid("json" as never)
         const tokens = await this.service.refreshToken(body)
         return ApiResponse.success(c, {
-            user: AuthSerializer.single(tokens.user as any),
+            user: AuthSerializer.single(tokens.user),
             accessToken: tokens.accessToken,
             refreshToken: tokens.refreshToken,
         }, "Token refreshed successfully")
@@ -63,7 +55,7 @@ export class AuthController {
     }
 
     async forgotPassword(c: Context) {
-        const body = await c.req.json() as ForgotPasswordValidator
+        const body = c.req.valid("json" as never)
         await this.service.forgotPassword(body)
         return ApiResponse.success(c, null, "Password reset instructions have been sent to your email")
     }
@@ -78,7 +70,7 @@ export class AuthController {
     }
 
     async resetPassword(c: Context) {
-        const body = await c.req.json() as ResetPasswordValidator
+        const body = c.req.valid("json" as never)
         await this.service.resetPassword(body)
         return ApiResponse.success(c, null, "Password has been successfully reset")
     }
