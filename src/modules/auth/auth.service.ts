@@ -16,6 +16,7 @@ import { mail } from "../../core/helpers/mail"
 import { UserService } from "../user/user.service"
 import { AuthHelper } from "../../core/helpers/auth"
 import { minio } from "../../core/helpers/minio"
+import { logger } from "../../core/helpers/logger"
 
 export class AuthService {
     constructor(
@@ -107,7 +108,7 @@ export class AuthService {
         await this.userService.save(user)
         const resetLink = `${config.app.appUrl}/auth/reset-password?email=${user.email}&token=${resetToken}`
         const text = `Halo ${user.name},\n\nKami menerima permintaan untuk mengatur ulang kata sandi akun Anda.\n\nSilakan klik tautan berikut untuk mengatur ulang kata sandi:\n${resetLink}\n\nTautan ini akan kedaluwarsa dalam 10 jam.\n\nJika Anda tidak meminta pengaturan ulang kata sandi, abaikan email ini.\n\nTerima kasih.`
-        mail.sendText(user.email, "Atur Ulang Kata Sandi", text).catch(err => console.error("[ForgotPassword] Failed to send email:", err))
+        mail.sendText(user.email, "Atur Ulang Kata Sandi", text).catch(err => logger.error('Failed to send forgot-password email', { email: user.email, err }))
         return true
     }
 

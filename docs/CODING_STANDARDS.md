@@ -37,9 +37,10 @@ src/
 
 | Jenis File | Pola Nama | Contoh |
 |------------|-----------|--------|
+| Enum | `{nama}.enum.ts` (dalam folder `enum/`) | `type.enum.ts`, `salutation.enum.ts` |
 | Entity | `{nama}.entity.ts` | `user.entity.ts`, `contact.entity.ts` |
 | Repository Interface | `{nama}.repository.interface.ts` | `user.repository.interface.ts` |
-| Repository Implementation | `typeorm-{nama}.repository.ts` | `typeorm-user.repository.ts` |
+| Repository Implementation | `{nama}.repository.ts` | `user.repository.ts` |
 | Service | `{nama}.service.ts` | `user.service.ts` |
 | Controller | `{nama}.controller.ts` | `contact.controller.ts` |
 | Module (DI Wiring) | `{nama}.module.ts` | `contact.module.ts` |
@@ -48,7 +49,7 @@ src/
 | Middleware | `{nama}.middleware.ts` | `auth.middleware.ts` |
 | Config | `{nama}.ts` | `config.ts`, `database.ts` |
 
-> **PENTING**: Semua nama file menggunakan **kebab-case** untuk multi-word (contoh: `api-key.middleware.ts`, `typeorm-user.repository.ts`).
+> **PENTING**: Semua nama file menggunakan **kebab-case** untuk multi-word (contoh: `api-key.middleware.ts`, `reset-password.validator.ts`).
 
 ---
 
@@ -58,6 +59,7 @@ src/
 
 | Jenis | Pola | Contoh |
 |-------|------|--------|
+| Enum | `PascalCase`, deskriptif, tanpa prefix nama module | `ContactType`, `Salutation` |
 | Entity | `PascalCase` (singular) | `User`, `Contact` |
 | Repository Interface | `I{Nama}Repository` | `IUserRepository`, `IContactRepository` |
 | Repository Implementation | `TypeOrm{Nama}Repository` | `TypeOrmUserRepository` |
@@ -112,6 +114,9 @@ export class EntityName {      // Nama class: PascalCase, singular
     @Column({ select: false })  // Untuk field sensitif (e.g., password)
     password?: string
 
+    @Column({ type: "enum", enum: StatusEnum, default: StatusEnum.ACTIVE })
+    status!: StatusEnum        // Enum: import dari folder enum/, lihat bagian Enum
+
     @CreateDateColumn({ name: "created_at" })
     createdAt!: Date
 
@@ -131,6 +136,29 @@ export class EntityName {      // Nama class: PascalCase, singular
 | Timestamps | Selalu gunakan `@CreateDateColumn` dan `@UpdateDateColumn` |
 | Primary Key | Selalu `@PrimaryGeneratedColumn()` → auto-increment integer |
 | Soft Delete | Belum diimplementasikan (gunakan `isActive` flag jika perlu) |
+
+### Enum
+
+```typescript
+// src/modules/contact/enum/type.enum.ts
+export enum ContactType {
+    CUSTOMER = 'customer',
+    VENDOR = 'vendor',
+    SUPPLIER = 'supplier',
+    OTHER = 'other',
+}
+```
+
+| Aturan | Detail |
+|--------|--------|
+| Folder | `enum/` di dalam module (singular, bukan `enums/`) |
+| Nama file | `{nama}.enum.ts`, deskriptif — tidak harus sama dengan nama module |
+| Nama class | `PascalCase`, deskriptif, **tanpa** prefix nama module (`ContactType`, bukan `ContactTypeEnum`) |
+| Value | String literal `lowercase`, sesuai nilai yang disimpan di database |
+| Isi file | Satu file enum = satu enum |
+| Pemakaian di entity | `@Column({ type: "enum", enum: XxxEnum, ... })` |
+| Pemakaian di validator | `z.enum(XxxEnum)` |
+| Duplikasi | JANGAN redefine enum di file lain — selalu import dari `enum/` |
 
 ---
 

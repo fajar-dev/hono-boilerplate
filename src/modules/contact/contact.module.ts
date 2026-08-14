@@ -1,4 +1,4 @@
-import { TypeOrmContactRepository } from "./repositories/typeorm-contact.repository"
+import { TypeOrmContactRepository } from "./repositories/contact.repository"
 import { ContactService } from "./contact.service"
 import { ContactController } from "./contact.controller"
 

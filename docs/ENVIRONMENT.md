@@ -18,6 +18,7 @@ cp .env.dist .env
 
 | Variable | Tipe | Default | Deskripsi |
 |----------|------|---------|-----------|
+| `APP_NAME` | string | `hono-be` | Nama service, muncul di setiap baris log JSON (field `service`) — dipakai sebagai label saat scrape ke Grafana Loki |
 | `PORT` | number | `4000` | Port server HTTP |
 | `ENV` | string | `development` | Environment: `development` / `production` |
 | `APP_URL` | string | `https://localhost:3000` | Base URL publik (untuk generate link, misal reset password) |
@@ -238,7 +239,7 @@ node_modules/       # Dependencies
 public/uploads     # Uploaded files
 database/          # Database files
 dist               # Build output
-logs/              # Error logs
+logs/              # Application logs (JSON, per tanggal)
 ```
 
 ---
@@ -253,33 +254,25 @@ logs/              # Error logs
 
 ## 9. Logging
 
+Semua log ditulis sebagai **satu baris JSON per event** ke stdout/stderr — format ini siap di-scrape Promtail/Grafana Alloy dan dikirim ke **Grafana Loki** tanpa setup tambahan di aplikasi. Panduan lengkap (skema field, cara menambah log, contoh config Promtail, contoh query LogQL): **`docs/LOGGING_GUIDE.md`**.
+
+### Access Log (per Request)
+
+Dicatat ke stdout untuk semua request, termasuk `requestId` (echo dari header `X-Request-Id` client atau digenerate baru):
+
+```json
+{"timestamp":"2026-06-17T15:00:00.000Z","level":"info","service":"hono-be","environment":"production","message":"HTTP request","requestId":"...","method":"GET","path":"/api/contact","statusCode":200,"durationMs":12}
+```
+
+### File Log
+
+- Semua level (`debug`/`info`/`warn`/`error`) di-append ke file JSON Lines, **satu file per tanggal**: `logs/app-2026-08-14.log`, `logs/app-2026-08-15.log`, dst (rotasi otomatis, tanggal UTC).
+- Berguna untuk deployment non-container yang tail file langsung (bukan stdout container).
+
 ### Error Logs
 
-- Lokasi: `logs/error.log`
-- Format:
-
-```
-[2026-06-17T12:00:00.000Z]
-GET /api/some-endpoint
-Message: Error message here
-Stack: Error stack trace...
----
-```
-
-- Hanya error 500 yang dicatat ke file
-- Stack trace di response hanya tampil di environment `development`
-
-### Request Logs
-
-- Setiap request dicatat ke stdout (console) dengan format:
-
-```
-[2026-06-17T15:00:00.000Z] GET /api/contact → 200 (12ms)
-[2026-06-17T15:00:01.000Z] POST /api/auth/login → 401 (156ms)
-```
-
-- Status code di-color-coded: 🟢 2xx, 🟡 4xx, 🔴 5xx
-- Log ini bisa di-capture oleh Docker, PM2, atau monitoring tools
+- Semua exception (validasi, business logic, 500) dicatat sebagai baris terpisah dengan detail error.
+- Stack trace di response API hanya tampil di environment `development`, tapi selalu ada di log.
 
 ---
 

@@ -24,6 +24,7 @@ function requireEnv(key: string, defaultValue?: string): string {
 
 export const config = {
     app: {
+        name: process.env.APP_NAME || 'hono-be',
         port: Number(process.env.PORT) || 3000,
         appUrl: process.env.APP_URL || 'http://localhost:4000',
         env,

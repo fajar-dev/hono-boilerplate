@@ -111,10 +111,10 @@ Baca: [`MODULE_GUIDE.md`](./MODULE_GUIDE.md)
 | Password hash | `src/core/helpers/hash.ts` | hashPassword, comparePassword |
 | Email sending | `src/core/helpers/mail.ts` | mail.sendText, mail.sendHtml |
 | File upload | `src/core/helpers/minio.ts` | minio.upload, minio.delete, dll |
-| Error logging | `src/core/helpers/logger.ts` | logError() |
+| Structured logger | `src/core/helpers/logger.ts` | `logger.info/warn/error/debug()` — JSON, lihat `docs/LOGGING_GUIDE.md` |
 | Auth middleware | `src/core/middlewares/auth.middleware.ts` | JWT Bearer |
 | API key middleware | `src/core/middlewares/api-key.middleware.ts` | x-api-key |
-| Request logger | `src/core/middlewares/logger.middleware.ts` | Log method, path, status, duration |
+| Request logger | `src/core/middlewares/logger.middleware.ts` | Access log JSON per request + `X-Request-Id` |
 | Route definitions | `src/routes/api.ts` | Semua route didefinisikan di sini |
 | Base repo interface | `src/core/interfaces/base.repository.interface.ts` | Interface dasar CRUD |
 | Health check | `GET /health` | Status DB, uptime, environment |
@@ -305,6 +305,19 @@ return ApiResponse.success(c, user)  // Bisa expose password, token, dll
 
 // ✅ BENAR — Gunakan serializer
 return ApiResponse.success(c, UserSerializer.single(user))
+```
+
+### 6. console.log/console.error Langsung
+
+```typescript
+// ❌ SALAH — Tidak terstruktur, tidak bisa di-scrape Loki
+console.log(`[Mail] Sent to ${to}`)
+console.error("Failed:", error)
+
+// ✅ BENAR — JSON terstruktur, lihat docs/LOGGING_GUIDE.md
+import { logger } from "../../core/helpers/logger"
+logger.info("Email sent", { to })
+logger.error("Failed to send email", { to, err: error })
 ```
 
 ---

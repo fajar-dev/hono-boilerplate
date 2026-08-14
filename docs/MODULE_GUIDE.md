@@ -21,14 +21,43 @@ src/modules/invoice/
 ├── repositories/
 ├── serializers/
 ├── validators/
-├── invoice.controller.ts   # Langkah 6
-├── invoice.service.ts      # Langkah 5
-└── invoice.module.ts       # Langkah 7
+├── enum/                   # Opsional — hanya jika entity punya field enum (Langkah 2)
+├── invoice.controller.ts   # Langkah 7
+├── invoice.service.ts      # Langkah 6
+└── invoice.module.ts       # Langkah 10
 ```
 
 ---
 
-## Langkah 2: Buat Entity
+## Langkah 2: Buat Enum (Opsional)
+
+Buat hanya jika entity memiliki field bertipe enum (mis. `status`, `type`, `salutation`).
+
+**File**: `src/modules/contact/enum/type.enum.ts`
+
+```typescript
+export enum ContactType {
+    CUSTOMER = 'customer',
+    VENDOR = 'vendor',
+    SUPPLIER = 'supplier',
+    OTHER = 'other',
+}
+```
+
+### Aturan Enum
+
+- Folder: `enum/` (singular, bukan `enums/`)
+- File: `{nama}.enum.ts` (kebab-case) — nama file deskriptif sesuai isinya, **tidak harus** sama dengan nama module (contoh: `type.enum.ts`, `salutation.enum.ts` di dalam module `contact`)
+- Class: **PascalCase**, noun deskriptif — **tidak** diprefix nama module (`ContactType`, bukan `ContactTypeEnum` atau `Type`)
+- Value: string literal **lowercase**, merepresentasikan nilai yang disimpan di database (`'customer'`, bukan `CUSTOMER` atau angka)
+- Satu file enum hanya berisi **satu** enum
+- Import dan pakai di entity: `@Column({ type: "enum", enum: ContactType, ... })`
+- Import dan pakai di validator: `z.enum(ContactType)`
+- JANGAN duplikasi definisi enum di file lain — selalu import dari `enum/`
+
+---
+
+## Langkah 3: Buat Entity
 
 **File**: `src/modules/invoice/entities/invoice.entity.ts`
 
@@ -69,10 +98,11 @@ export class Invoice {
 - Kolom DB snake_case → property camelCase: mapping via `{ name: "snake_case" }`
 - **Selalu** tambahkan `@CreateDateColumn` dan `@UpdateDateColumn`
 - Primary key: `@PrimaryGeneratedColumn()` (auto-increment integer)
+- Field enum: `@Column({ type: "enum", enum: XxxEnum, ... })`, import dari `enum/` (lihat Langkah 2)
 
 ---
 
-## Langkah 3: Buat Repository Interface
+## Langkah 4: Buat Repository Interface
 
 **File**: `src/modules/invoice/interfaces/invoice.repository.interface.ts`
 
@@ -101,9 +131,9 @@ export interface IInvoiceRepository {
 
 ---
 
-## Langkah 4: Buat TypeORM Repository
+## Langkah 5: Buat TypeORM Repository
 
-**File**: `src/modules/invoice/repositories/typeorm-invoice.repository.ts`
+**File**: `src/modules/invoice/repositories/invoice.repository.ts`
 
 ```typescript
 import { EntityManager, Repository } from "typeorm"
@@ -172,7 +202,7 @@ export class TypeOrmInvoiceRepository implements IInvoiceRepository {
 
 ---
 
-## Langkah 5: Buat Service
+## Langkah 6: Buat Service
 
 **File**: `src/modules/invoice/invoice.service.ts`
 
@@ -228,7 +258,7 @@ export class InvoiceService {
 
 ---
 
-## Langkah 6: Buat Controller
+## Langkah 7: Buat Controller
 
 **File**: `src/modules/invoice/invoice.controller.ts`
 
@@ -291,7 +321,7 @@ export class InvoiceController {
 
 ---
 
-## Langkah 7: Buat Validator
+## Langkah 8: Buat Validator
 
 **File**: `src/modules/invoice/validators/invoice.validator.ts`
 
@@ -327,7 +357,7 @@ export type UpdateInvoiceValidator = z.infer<typeof UpdateInvoiceValidator>
 
 ---
 
-## Langkah 8: Buat Serializer
+## Langkah 9: Buat Serializer
 
 **File**: `src/modules/invoice/serializers/invoice.serialize.ts`
 
@@ -364,12 +394,12 @@ export class InvoiceSerializer {
 
 ---
 
-## Langkah 9: Buat Module (Composition Root)
+## Langkah 10: Buat Module (Composition Root)
 
 **File**: `src/modules/invoice/invoice.module.ts`
 
 ```typescript
-import { TypeOrmInvoiceRepository } from "./repositories/typeorm-invoice.repository"
+import { TypeOrmInvoiceRepository } from "./repositories/invoice.repository"
 import { InvoiceService } from "./invoice.service"
 import { InvoiceController } from "./invoice.controller"
 
@@ -388,7 +418,7 @@ export const invoiceController = new InvoiceController(invoiceService)
 
 ---
 
-## Langkah 10: Daftarkan Entity di Database Config
+## Langkah 11: Daftarkan Entity di Database Config
 
 **File**: `src/config/database.ts`
 
@@ -405,7 +435,7 @@ export const AppDataSource = new DataSource({
 
 ---
 
-## Langkah 11: Tambahkan Route
+## Langkah 12: Tambahkan Route
 
 **File**: `src/routes/api.ts`
 
@@ -435,7 +465,7 @@ routes.delete("/invoice/:id", authMiddleware, (c) => invoiceController.destroy(c
 
 ---
 
-## Langkah 12: Update Swagger (Opsional tapi Disarankan)
+## Langkah 13: Update Swagger (Opsional tapi Disarankan)
 
 Tambahkan definisi di `swagger.yaml`:
 
@@ -448,9 +478,10 @@ Tambahkan definisi di `swagger.yaml`:
 ## Checklist Module Baru
 
 ```
+☐ enum/{nama}.enum.ts (opsional, jika ada field enum)
 ☐ entities/{nama}.entity.ts
 ☐ interfaces/{nama}.repository.interface.ts
-☐ repositories/typeorm-{nama}.repository.ts
+☐ repositories/{nama}.repository.ts
 ☐ {nama}.service.ts
 ☐ {nama}.controller.ts
 ☐ validators/{nama}.validator.ts

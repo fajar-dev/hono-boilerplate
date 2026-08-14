@@ -8,8 +8,9 @@ import { ApiResponse } from './core/helpers/response'
 import { BaseException, ValidationException } from './core/exceptions/base'
 import { ZodError } from 'zod'
 import { config } from './config/config'
-import { logError } from './core/helpers/logger'
+import { logger } from './core/helpers/logger'
 import { requestLogger } from './core/middlewares/logger.middleware'
+import { languageMiddleware } from './core/middlewares/language.middleware'
 
 const app = new Hono()
 
@@ -22,10 +23,13 @@ app.use('*', cors({
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
 }))
 
+// Language Detection (Accept-Language header)
+app.use('*', languageMiddleware)
+
 // Database Connection
 AppDataSource.initialize()
-    .then(() => console.log("Database connected successfully"))
-    .catch((err) => console.error("Database connection error", err))
+    .then(() => logger.info('Database connected successfully'))
+    .catch((err) => logger.error('Database connection failed', { err }))
 
 // Health Check (untuk load balancer, K8s, monitoring)
 app.get('/health', async (c) => {
@@ -51,31 +55,26 @@ app.route('/api', api)
 app.get('/api/swagger.yaml', serveStatic({ path: './swagger.yaml' }))
 app.get('/api/docs', swaggerUI({ url: '/api/swagger.yaml' }))
 
-// Static Files
-app.get('/api/uploads/*', (c, next) => {
-    return serveStatic({ 
-        root: './public', 
-        path: c.req.path.replace(/^\/api/, '') 
-    })(c, next)
-})
-
 // Global Error Handler
 app.onError((err, c) => {
+    const context = { requestId: c.get('requestId'), method: c.req.method, path: c.req.path }
+
     if (err instanceof ZodError) {
         const valErr = new ValidationException(err)
+        logger.warn('Validation error', { ...context, statusCode: valErr.status, err: valErr })
         return ApiResponse.error(c, valErr.message, valErr.status, valErr.context)
     }
 
     if (err instanceof BaseException) {
+        logger.warn('Handled exception', { ...context, statusCode: err.status, err })
         return ApiResponse.error(c, err.message, err.status, err.context)
     }
 
-    // Log 500 errors to file
-    logError(err, { method: c.req.method, path: c.req.path })
+    logger.error('Unhandled exception', { ...context, statusCode: 500, err })
 
-    const errors = config.app.isProduction ? null : { 
-        message: err.message, 
-        stack: err.stack 
+    const errors = config.app.isProduction ? null : {
+        message: err.message,
+        stack: err.stack
     }
 
     return ApiResponse.error(c, "Internal Server Error", 500, errors)

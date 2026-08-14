@@ -1,32 +1,44 @@
 import { Context, Next } from 'hono'
+import { getConnInfo } from 'hono/bun'
+import { logger } from '../helpers/logger'
 
-/**
- * Request Logger Middleware
- * 
- * Log setiap request yang masuk dengan format:
- * [TIMESTAMP] METHOD /path → STATUS (duration)
- * 
- * Contoh output:
- * [2026-06-17T15:00:00.000Z] GET /api/contact → 200 (12ms)
- * [2026-06-17T15:00:01.000Z] POST /api/auth/login → 401 (156ms)
- */
+declare module 'hono' {
+    interface ContextVariableMap {
+        requestId: string
+    }
+}
+
+function resolveIp(c: Context): string | undefined {
+    const forwarded = c.req.header('x-forwarded-for')
+    if (forwarded) return forwarded.split(',')[0].trim()
+
+    try {
+        return getConnInfo(c).remote.address
+    } catch {
+        return undefined
+    }
+}
+
 export const requestLogger = async (c: Context, next: Next) => {
     const start = Date.now()
-    const method = c.req.method
-    const path = c.req.path
+    const requestId = c.req.header('x-request-id') || crypto.randomUUID()
+    c.set('requestId', requestId)
+    c.header('X-Request-Id', requestId)
 
     await next()
 
-    const duration = Date.now() - start
-    const status = c.res.status
-    const timestamp = new Date().toISOString()
+    const durationMs = Date.now() - start
+    const statusCode = c.res.status
+    const level = statusCode >= 500 ? 'error' : statusCode >= 400 ? 'warn' : 'info'
 
-    // Color-coded status for terminal readability
-    const statusColor = status >= 500 ? '\x1b[31m'  // red
-        : status >= 400 ? '\x1b[33m'                 // yellow
-        : status >= 300 ? '\x1b[36m'                 // cyan
-        : '\x1b[32m'                                  // green
-    const reset = '\x1b[0m'
-
-    console.log(`[${timestamp}] ${method} ${path} → ${statusColor}${status}${reset} (${duration}ms)`)
+    logger[level]('HTTP request', {
+        requestId,
+        method: c.req.method,
+        path: c.req.path,
+        query: c.req.query(),
+        statusCode,
+        durationMs,
+        ip: resolveIp(c),
+        userAgent: c.req.header('user-agent'),
+    })
 }

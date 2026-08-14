@@ -1,13 +1,26 @@
 openapi: 3.0.0
 info:
   title: Hono BE API
-  description: API Documentation for Hono BE Backend Service — Authentication module.
+  description: >-
+    API Documentation for Hono BE Backend Service.
+    Language is detected from the `Accept-Language` header (`en` default, `id` supported)
+    and echoed back via the `Content-Language` response header on every response.
   version: 2.0.0
 servers:
   - url: http://localhost:4000/api
     description: Local development server
   - url: /api
     description: Relative API server
+
+tags:
+  - name: Auth
+    description: Registration, login, session, and password management
+  - name: Contact
+    description: Contact CRUD
+  - name: User
+    description: User CRUD (admin/management)
+  - name: Upload
+    description: File upload & retrieval via MinIO object storage
 
 components:
   securitySchemes:
@@ -16,6 +29,27 @@ components:
       scheme: bearer
       bearerFormat: JWT
       description: "JWT access token. Expires in 15 minutes."
+
+  parameters:
+    AcceptLanguage:
+      name: Accept-Language
+      in: header
+      required: false
+      description: >-
+        Preferred response language. Supported: `en` (default), `id`.
+        Missing or unsupported values fall back to `en`.
+      schema:
+        type: string
+        enum: [en, id]
+        default: en
+      example: id
+
+  headers:
+    ContentLanguage:
+      description: Resolved response language (`en` or `id`), echoed back from `Accept-Language`.
+      schema:
+        type: string
+        enum: [en, id]
 
   schemas:
     # --- Base Wrapper Schemas ---
@@ -26,6 +60,14 @@ components:
         statusCode: { type: integer, example: 200 }
         message: { type: string, example: "Operation successful" }
 
+    ErrorResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: false }
+        statusCode: { type: integer, example: 400 }
+        message: { type: string, example: "Something went wrong" }
+        errors: { type: object, nullable: true, example: null }
+
     ValidationError:
       type: object
       properties:
@@ -33,10 +75,12 @@ components:
         statusCode: { type: integer, example: 422 }
         message: { type: string, example: "Validation failed" }
         errors:
-          type: object
-          example:
-            email: "Invalid email format"
-            password: "Password must be at least 6 characters"
+          type: array
+          items:
+            type: object
+            properties:
+              field: { type: string, example: "email" }
+              message: { type: string, example: "Invalid email format" }
 
     # --- Auth Schemas ---
     RegisterRequest:
@@ -79,7 +123,7 @@ components:
       properties:
         refreshToken: { type: string, example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." }
 
-    # --- User Schema ---
+    # --- Auth User Schema (response shape from AuthSerializer) ---
     AuthUser:
       type: object
       properties:
@@ -88,6 +132,10 @@ components:
         photo: { type: string, nullable: true, example: "https://cdn.example.com/photo.jpg" }
         email: { type: string, format: email, example: "budi@example.com" }
         isActive: { type: boolean, example: true }
+        hasPassword:
+          type: boolean
+          description: Whether the account has a password set (false for Google-only accounts)
+          example: true
 
     AuthResponse:
       type: object
@@ -102,7 +150,36 @@ components:
           description: "JWT refresh token, expires in 7 days"
           example: "eyJhbGciOiJIUzI1NiIs..."
 
+    UpdateProfileRequest:
+      type: object
+      required: [name, email]
+      properties:
+        name: { type: string, example: "Budi Santoso" }
+        email: { type: string, format: email, example: "budi@example.com" }
+        photo: { type: string, nullable: true, example: "users/abc-123.png" }
+
+    UpdatePasswordRequest:
+      type: object
+      required: [newPassword]
+      properties:
+        oldPassword:
+          type: string
+          description: Required only if the account already has a password set
+          example: "oldSecret123"
+        newPassword: { type: string, minLength: 6, example: "newSecret123" }
+
     # --- Contact Schemas ---
+    Salutation:
+      type: string
+      enum: [mr, mrs]
+      example: mr
+
+    ContactType:
+      type: string
+      enum: [customer, vendor, supplier, other]
+      default: customer
+      example: customer
+
     Contact:
       type: object
       properties:
@@ -118,16 +195,23 @@ components:
       required: [name]
       properties:
         name: { type: string, example: "John Doe" }
+        salutation: { allOf: [{ $ref: "#/components/schemas/Salutation" }], nullable: true }
         email: { type: string, format: email, example: "john@example.com" }
         phone: { type: string, example: "081234567890" }
+        type: { $ref: "#/components/schemas/ContactType" }
+        isActive: { type: boolean, default: true, example: true }
 
     UpdateContactRequest:
       type: object
       properties:
         name: { type: string, example: "John Doe" }
-        email: { type: string, format: email, example: "john@example.com" }
-        phone: { type: string, example: "081234567890" }
+        salutation: { allOf: [{ $ref: "#/components/schemas/Salutation" }], nullable: true }
+        email: { type: string, format: email, nullable: true, example: "john@example.com" }
+        phone: { type: string, nullable: true, example: "081234567890" }
+        type: { $ref: "#/components/schemas/ContactType" }
+        isActive: { type: boolean, example: true }
 
+    # --- User Schemas (response shape from UserSerializer, distinct from AuthUser) ---
     PaginationMeta:
       type: object
       properties:
@@ -137,6 +221,16 @@ components:
         lastPage: { type: integer, example: 5 }
         from: { type: integer, example: 1 }
         to: { type: integer, example: 10 }
+
+    User:
+      type: object
+      properties:
+        id: { type: integer, example: 1 }
+        name: { type: string, example: "John Doe" }
+        photo: { type: string, nullable: true, example: "https://cdn.example.com/photo.jpg" }
+        email: { type: string, format: email, example: "john@example.com" }
+        isActive: { type: boolean, example: true }
+        createdAt: { type: string, format: date-time, example: "2026-06-01T08:00:00.000Z" }
 
     CreateUserRequest:
       type: object
@@ -157,24 +251,11 @@ components:
         photo: { type: string, nullable: true, example: "users/abc-123.png" }
         isActive: { type: boolean, example: true }
 
-    UpdateProfileRequest:
-      type: object
-      required: [name, email]
-      properties:
-        name: { type: string, example: "Budi Santoso" }
-        email: { type: string, format: email, example: "budi@example.com" }
-        photo: { type: string, nullable: true, example: "users/abc-123.png" }
-
-    UpdatePasswordRequest:
-      type: object
-      required: [newPassword]
-      properties:
-        oldPassword: { type: string, example: "oldSecret123" }
-        newPassword: { type: string, minLength: 6, example: "newSecret123" }
-
 paths:
   # ── Register ──────────────────────────────────────────────────────────────
   /auth/register:
+    parameters:
+      - $ref: "#/components/parameters/AcceptLanguage"
     post:
       tags: [Auth]
       summary: Register a new user
@@ -194,10 +275,21 @@ paths:
                   - type: object
                     properties:
                       data: { $ref: "#/components/schemas/AuthUser" }
-        "422": { description: Validation error, content: { application/json: { schema: { $ref: "#/components/schemas/ValidationError" } } } }
+        "400":
+          description: Email already in use
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ValidationError" }
 
   # ── Login ─────────────────────────────────────────────────────────────────
   /auth/login:
+    parameters:
+      - $ref: "#/components/parameters/AcceptLanguage"
     post:
       tags: [Auth]
       summary: Login with email and password
@@ -209,6 +301,8 @@ paths:
       responses:
         "200":
           description: Logged in successfully
+          headers:
+            Content-Language: { $ref: "#/components/headers/ContentLanguage" }
           content:
             application/json:
               schema:
@@ -217,11 +311,21 @@ paths:
                   - type: object
                     properties:
                       data: { $ref: "#/components/schemas/AuthResponse" }
-        "401": { description: Invalid credentials }
-        "422": { description: Validation error }
+        "401":
+          description: User not registered, account inactive, or invalid credentials
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ValidationError" }
 
   # ── Google Login ──────────────────────────────────────────────────────────
   /auth/google:
+    parameters:
+      - $ref: "#/components/parameters/AcceptLanguage"
     post:
       tags: [Auth]
       summary: Login with Google OAuth
@@ -241,10 +345,21 @@ paths:
                   - type: object
                     properties:
                       data: { $ref: "#/components/schemas/AuthResponse" }
-        "400": { description: User not registered or account inactive }
+        "400":
+          description: User not registered or account inactive
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ValidationError" }
 
   # ── Forgot Password ──────────────────────────────────────────────────────
   /auth/forgot-password:
+    parameters:
+      - $ref: "#/components/parameters/AcceptLanguage"
     post:
       tags: [Auth]
       summary: Request password reset email
@@ -259,10 +374,21 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/BaseResponse" }
-        "400": { description: Email not found or account inactive }
+        "400":
+          description: Email not found or account inactive
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ValidationError" }
 
   # ── Validate Reset Token ─────────────────────────────────────────────────
   /auth/validate-reset-token:
+    parameters:
+      - $ref: "#/components/parameters/AcceptLanguage"
     get:
       tags: [Auth]
       summary: Validate a password reset token
@@ -281,10 +407,16 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/BaseResponse" }
-        "400": { description: Invalid or expired reset token }
+        "400":
+          description: Missing email/token, or invalid/expired reset token
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
 
   # ── Reset Password ──────────────────────────────────────────────────────
   /auth/reset-password:
+    parameters:
+      - $ref: "#/components/parameters/AcceptLanguage"
     post:
       tags: [Auth]
       summary: Reset password with token
@@ -299,10 +431,21 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/BaseResponse" }
-        "400": { description: Invalid or expired reset token }
+        "400":
+          description: Invalid or expired reset token
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ValidationError" }
 
   # ── Refresh Token ────────────────────────────────────────────────────────
   /auth/refresh:
+    parameters:
+      - $ref: "#/components/parameters/AcceptLanguage"
     post:
       tags: [Auth]
       summary: Refresh access token
@@ -322,10 +465,21 @@ paths:
                   - type: object
                     properties:
                       data: { $ref: "#/components/schemas/AuthResponse" }
-        "401": { description: Invalid or expired refresh token }
+        "401":
+          description: Invalid or expired refresh token
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ValidationError" }
 
   # ── Me ───────────────────────────────────────────────────────────────────
   /auth/me:
+    parameters:
+      - $ref: "#/components/parameters/AcceptLanguage"
     get:
       tags: [Auth]
       summary: Get current authenticated user
@@ -342,9 +496,15 @@ paths:
                   - type: object
                     properties:
                       data: { $ref: "#/components/schemas/AuthUser" }
-        "401": { description: Unauthorized }
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
 
   /auth/profile:
+    parameters:
+      - $ref: "#/components/parameters/AcceptLanguage"
     put:
       tags: [Auth]
       summary: Update current user's profile details
@@ -366,11 +526,25 @@ paths:
                   - type: object
                     properties:
                       data: { $ref: "#/components/schemas/AuthUser" }
-        "400": { description: Email already in use }
-        "401": { description: Unauthorized }
-        "422": { description: Validation error }
+        "400":
+          description: Email already in use
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ValidationError" }
 
   /auth/password:
+    parameters:
+      - $ref: "#/components/parameters/AcceptLanguage"
     put:
       tags: [Auth]
       summary: Update current user's password
@@ -387,12 +561,26 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/BaseResponse" }
-        "400": { description: Invalid old password / Old password required }
-        "401": { description: Unauthorized }
-        "422": { description: Validation error }
+        "400":
+          description: Invalid old password, or old password required
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ValidationError" }
 
   # ── Logout ───────────────────────────────────────────────────────────────
   /auth/logout:
+    parameters:
+      - $ref: "#/components/parameters/AcceptLanguage"
     post:
       tags: [Auth]
       summary: Logout current user
@@ -404,10 +592,16 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/BaseResponse" }
-        "401": { description: Unauthorized }
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
 
   # ── Contact List ─────────────────────────────────────────────────────────
   /contact:
+    parameters:
+      - $ref: "#/components/parameters/AcceptLanguage"
     get:
       tags: [Contact]
       summary: Get all contacts (paginated)
@@ -438,7 +632,11 @@ paths:
                         type: array
                         items: { $ref: "#/components/schemas/Contact" }
                       meta: { $ref: "#/components/schemas/PaginationMeta" }
-        "401": { description: Unauthorized }
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
 
     # ── Contact Create ───────────────────────────────────────────────────────
     post:
@@ -462,21 +660,30 @@ paths:
                   - type: object
                     properties:
                       data: { $ref: "#/components/schemas/Contact" }
-        "401": { description: Unauthorized }
-        "422": { description: Validation error }
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ValidationError" }
 
   # ── Contact Detail / Update / Delete ─────────────────────────────────────
   /contact/{id}:
+    parameters:
+      - $ref: "#/components/parameters/AcceptLanguage"
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer }
     get:
       tags: [Contact]
       summary: Get contact by ID
       security:
         - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: integer }
       responses:
         "200":
           description: Contact retrieved successfully
@@ -488,19 +695,22 @@ paths:
                   - type: object
                     properties:
                       data: { $ref: "#/components/schemas/Contact" }
-        "401": { description: Unauthorized }
-        "404": { description: Contact not found }
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "404":
+          description: Contact not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
 
     put:
       tags: [Contact]
       summary: Update a contact
       security:
         - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: integer }
       requestBody:
         required: true
         content:
@@ -517,31 +727,48 @@ paths:
                   - type: object
                     properties:
                       data: { $ref: "#/components/schemas/Contact" }
-        "401": { description: Unauthorized }
-        "404": { description: Contact not found }
-        "422": { description: Validation error }
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "404":
+          description: Contact not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ValidationError" }
 
     delete:
       tags: [Contact]
       summary: Delete a contact
       security:
         - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: integer }
       responses:
         "200":
           description: Contact deleted successfully
           content:
             application/json:
               schema: { $ref: "#/components/schemas/BaseResponse" }
-        "401": { description: Unauthorized }
-        "404": { description: Contact not found }
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "404":
+          description: Contact not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
 
   # ── User List ────────────────────────────────────────────────────────────
   /user:
+    parameters:
+      - $ref: "#/components/parameters/AcceptLanguage"
     get:
       tags: [User]
       summary: Get all users (paginated)
@@ -560,8 +787,8 @@ paths:
           schema: { type: string }
         - name: isActive
           in: query
-          description: Filter by status (1 = active, 0 = inactive)
-          schema: { type: string }
+          description: Filter by status ("1" = active, "0" = inactive)
+          schema: { type: string, enum: ["1", "0"] }
       responses:
         "200":
           description: Users retrieved successfully
@@ -574,9 +801,13 @@ paths:
                     properties:
                       data:
                         type: array
-                        items: { $ref: "#/components/schemas/AuthUser" }
+                        items: { $ref: "#/components/schemas/User" }
                       meta: { $ref: "#/components/schemas/PaginationMeta" }
-        "401": { description: Unauthorized }
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
 
     post:
       tags: [User]
@@ -598,23 +829,36 @@ paths:
                   - $ref: "#/components/schemas/BaseResponse"
                   - type: object
                     properties:
-                      data: { $ref: "#/components/schemas/AuthUser" }
-        "400": { description: Email already in use }
-        "401": { description: Unauthorized }
-        "422": { description: Validation error }
+                      data: { $ref: "#/components/schemas/User" }
+        "400":
+          description: Email already in use
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ValidationError" }
 
   # ── User Detail / Update / Delete ────────────────────────────────────────
   /user/{id}:
+    parameters:
+      - $ref: "#/components/parameters/AcceptLanguage"
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer }
     get:
       tags: [User]
       summary: Get user by ID
       security:
         - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: integer }
       responses:
         "200":
           description: User retrieved successfully
@@ -625,20 +869,23 @@ paths:
                   - $ref: "#/components/schemas/BaseResponse"
                   - type: object
                     properties:
-                      data: { $ref: "#/components/schemas/AuthUser" }
-        "401": { description: Unauthorized }
-        "404": { description: User not found }
+                      data: { $ref: "#/components/schemas/User" }
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
 
     put:
       tags: [User]
       summary: Update a user
       security:
         - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: integer }
       requestBody:
         required: true
         content:
@@ -654,30 +901,49 @@ paths:
                   - $ref: "#/components/schemas/BaseResponse"
                   - type: object
                     properties:
-                      data: { $ref: "#/components/schemas/AuthUser" }
-        "400": { description: Email already in use }
-        "401": { description: Unauthorized }
-        "404": { description: User not found }
-        "422": { description: Validation error }
+                      data: { $ref: "#/components/schemas/User" }
+        "400":
+          description: Email already in use
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ValidationError" }
 
     delete:
       tags: [User]
       summary: Delete a user
       security:
         - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: integer }
       responses:
         "200":
           description: User deleted successfully
           content:
             application/json:
               schema: { $ref: "#/components/schemas/BaseResponse" }
-        "401": { description: Unauthorized }
-        "404": { description: User not found }
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
 
   # ── Upload File ──────────────────────────────────────────────────────────
   /upload:
@@ -712,6 +978,40 @@ paths:
                         type: object
                         properties:
                           path: { type: string, example: "users/abc-123.png" }
-        "400": { description: No file uploaded or invalid file }
-        "401": { description: Unauthorized }
+        "400":
+          description: No file uploaded or invalid file
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
 
+  # ── Proxy File ───────────────────────────────────────────────────────────
+  /proxy:
+    get:
+      tags: [Upload]
+      summary: Stream a file stored in MinIO
+      description: Public endpoint (no auth) that streams the raw file content for the given object path, e.g. the `path` returned by `POST /upload`.
+      parameters:
+        - name: path
+          in: query
+          required: true
+          description: Object path/key in the MinIO bucket
+          schema: { type: string }
+      responses:
+        "200":
+          description: File stream
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        "400":
+          description: Missing 'path' query parameter
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string, example: "Missing 'path' query parameter" }

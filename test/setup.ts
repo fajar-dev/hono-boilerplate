@@ -9,6 +9,8 @@ import { BaseException, ValidationException } from "../src/core/exceptions/base"
 import { ZodError } from "zod"
 import { config } from "../src/config/config"
 import { setDataSource } from "../src/config/database"
+import { languageMiddleware } from "../src/core/middlewares/language.middleware"
+import { requestLogger } from "../src/core/middlewares/logger.middleware"
 
 // ── Test Database ───────────────────────────────────────────────────────────
 // Uses real database with a separate test database name
@@ -85,7 +87,9 @@ export function createTestApp(): Hono {
 
     const app = new Hono()
 
+    app.use("*", requestLogger)
     app.use("*", cors({ origin: "*", allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"] }))
+    app.use("*", languageMiddleware)
     app.route("/api", api)
 
     // Global Error Handler (matches production)
@@ -131,7 +135,7 @@ export async function request(app: Hono, path: string, options: RequestOptions =
     const res = await app.request(path, init)
     const json = await res.json() as any
 
-    return { status: res.status, body: json }
+    return { status: res.status, body: json, headers: res.headers }
 }
 
 // ── Auth Helper ─────────────────────────────────────────────────────────────

@@ -39,34 +39,37 @@ Controller → Service → Repository (via Interface)
 7. **JANGAN** instantiate service/repository di controller → wiring hanya di `*.module.ts`
 8. **JANGAN** import `AppDataSource` di service → transaction dikelola di repository layer
 9. **JANGAN** gunakan `c.req.json()` di controller → gunakan `c.req.valid("json" as never)` agar Zod validation berjalan
+10. **JANGAN** pakai `console.log`/`console.error` langsung → gunakan `logger` dari `src/core/helpers/logger.ts` (baca `docs/LOGGING_GUIDE.md`)
 
 ## Membuat Module Baru
 
 Baca panduan lengkap: `docs/MODULE_GUIDE.md`
 
 Checklist:
-1. `entities/{nama}.entity.ts` — TypeORM entity
-2. `interfaces/{nama}.repository.interface.ts` — Repository contract (extends `IBaseRepository<T>`)
-3. `repositories/typeorm-{nama}.repository.ts` — TypeORM implementation
-4. `{nama}.service.ts` — Business logic
-5. `{nama}.controller.ts` — HTTP handlers (gunakan `c.req.valid()`, bukan `c.req.json()`)
-6. `validators/{nama}.validator.ts` — Zod schemas
-7. `serializers/{nama}.serialize.ts` — Response transform (harus punya `single()` dan `collection()`)
-8. `{nama}.module.ts` — DI wiring (Composition Root)
-9. Daftarkan entity di `src/config/database.ts` → array `entities`
-10. Tambahkan route di `src/routes/api.ts`
-11. Buat test E2E di `test/{nama}.test.ts`
-12. Tambahkan data factory di `test/helpers.ts`
-13. Update `swagger.yaml`
-14. Update `docs/CHANGELOG.md`
-15. Jalankan `bun test` → pastikan semua pass
+1. `enum/{nama}.enum.ts` — Enum (opsional, hanya jika ada field enum)
+2. `entities/{nama}.entity.ts` — TypeORM entity
+3. `interfaces/{nama}.repository.interface.ts` — Repository contract (extends `IBaseRepository<T>`)
+4. `repositories/{nama}.repository.ts` — TypeORM implementation
+5. `{nama}.service.ts` — Business logic
+6. `{nama}.controller.ts` — HTTP handlers (gunakan `c.req.valid()`, bukan `c.req.json()`)
+7. `validators/{nama}.validator.ts` — Zod schemas
+8. `serializers/{nama}.serialize.ts` — Response transform (harus punya `single()` dan `collection()`)
+9. `{nama}.module.ts` — DI wiring (Composition Root)
+10. Daftarkan entity di `src/config/database.ts` → array `entities`
+11. Tambahkan route di `src/routes/api.ts`
+12. Buat test E2E di `test/{nama}.test.ts`
+13. Tambahkan data factory di `test/helpers.ts`
+14. Update `swagger.yaml` (baca `docs/SWAGGER_GUIDE.md`)
+15. Update `docs/CHANGELOG.md`
+16. Jalankan `bun test` → pastikan semua pass
 
 ## Naming Conventions
 
 ### Files (kebab-case)
+- Enum: `{nama}.enum.ts` (di dalam folder `enum/`, singular)
 - Entity: `{nama}.entity.ts`
 - Repo interface: `{nama}.repository.interface.ts`
-- Repo implementation: `typeorm-{nama}.repository.ts`
+- Repo implementation: `{nama}.repository.ts`
 - Service: `{nama}.service.ts`
 - Controller: `{nama}.controller.ts`
 - Validator: `{nama}.validator.ts`
@@ -76,6 +79,7 @@ Checklist:
 - Test: `{nama}.test.ts`
 
 ### Classes (PascalCase)
+- Enum: nama deskriptif, tanpa prefix nama module (`ContactType`, bukan `ContactTypeEnum`)
 - Entity: `Invoice`
 - Repo interface: `IInvoiceRepository`
 - Repo implementation: `TypeOrmInvoiceRepository`
@@ -164,6 +168,19 @@ routes.put("/{resource}/:id", authMiddleware, zValidator("json", UpdateXxxValida
 routes.delete("/{resource}/:id", authMiddleware, (c) => xxxController.destroy(c))
 ```
 
+## Language Detection & Pesan Response
+
+- Bahasa dideteksi dari header `Accept-Language`, bukan query string atau cookie.
+- Didukung: `en` (default) dan `id`. Header tidak dikirim atau bahasa tidak didukung → fallback `en`.
+- Bahasa yang terdeteksi tersedia via `c.get("language")` di controller/service, dan dikembalikan ke client melalui response header `Content-Language`.
+- Middleware: `src/core/middlewares/language.middleware.ts`, didaftarkan global di `src/index.ts` (dan `test/setup.ts` untuk test).
+- Message pada `ApiResponse.success/paginate/error` (termasuk message dari exception dan field error Zod) **otomatis diterjemahkan** ke Indonesia jika bahasa terdeteksi `id`, via `translate()` di `src/core/helpers/i18n.ts`.
+- Tulis message di controller/service/exception/validator **selalu dalam Bahasa Inggris seperti biasa** (string ini jadi key kamus) — JANGAN hardcode Bahasa Indonesia di kode.
+- Kamus terjemahan disimpan sebagai JSON, key harus identik (case-sensitive) di kedua file:
+  - `src/core/i18n/en.json` — key = value (teks Inggris asli, sekaligus daftar master semua message yang bisa diterjemahkan)
+  - `src/core/i18n/id.json` — key sama, value = terjemahan Indonesia
+- Menambah message baru: tambahkan key yang sama di **kedua** file. Jika key tidak ada di `id.json`, otomatis fallback ke teks Inggris aslinya (tidak error).
+
 ## File Referensi Penting
 
 | Kebutuhan | File |
@@ -177,7 +194,10 @@ routes.delete("/{resource}/:id", authMiddleware, (c) => xxxController.destroy(c)
 | Password | `src/core/helpers/hash.ts` |
 | Email | `src/core/helpers/mail.ts` |
 | File storage | `src/core/helpers/minio.ts` |
-| Request logger | `src/core/middlewares/logger.middleware.ts` |
+| Structured logger (JSON) | `src/core/helpers/logger.ts` |
+| Request access log | `src/core/middlewares/logger.middleware.ts` |
+| Language detection | `src/core/middlewares/language.middleware.ts` |
+| Terjemahan pesan | `src/core/helpers/i18n.ts`, `src/core/i18n/en.json`, `src/core/i18n/id.json` |
 | Routes | `src/routes/api.ts` |
 | Swagger | `swagger.yaml` |
 | Test setup | `test/setup.ts` |
@@ -237,6 +257,9 @@ Baca semua file di folder `docs/` untuk detail lebih lanjut:
 - `docs/API_CONVENTIONS.md` — Standar API response & error
 - `docs/DATABASE_GUIDE.md` — Entity, repository, query patterns
 - `docs/TESTING_GUIDE.md` — Panduan testing lengkap + template
+- `docs/LANGUAGE_GUIDE.md` — Panduan language detection & terjemahan message (i18n)
+- `docs/SWAGGER_GUIDE.md` — Panduan menulis & memvalidasi `swagger.yaml`
+- `docs/LOGGING_GUIDE.md` — Panduan structured logging (JSON) & integrasi Grafana Loki
 - `docs/CHANGELOG.md` — Riwayat perubahan
 - `docs/ENVIRONMENT.md` — Environment variables & deployment
 - `docs/PROJECT_MAP.md` — Peta file & dependency graph

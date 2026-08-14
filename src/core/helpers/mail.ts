@@ -1,5 +1,6 @@
 import { transporter } from "../../config/smtp"
 import { config } from "../../config/config"
+import { logger } from "./logger"
 
 interface MailPayload {
     to: string;
@@ -25,10 +26,10 @@ class Mail {
                 html,
             })
             
-            console.log(`[Mail] Message sent successfully to ${to} (ID: ${info.messageId})`)
+            logger.info('Email sent', { to, subject, messageId: info.messageId })
             return info
         } catch (error) {
-            console.error(`[Mail] Error sending email to ${to}:`, error)
+            logger.error('Failed to send email', { to, subject, err: error })
             throw new Error(`Failed to send email to ${to}: ${(error as Error).message}`)
         }
     }

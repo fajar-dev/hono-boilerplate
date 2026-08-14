@@ -1,5 +1,17 @@
 import { Context } from "hono"
 import { ContentfulStatusCode } from "hono/utils/http-status"
+import { translate } from "./i18n"
+
+// Translates each item's message in errors arrays (e.g. ValidationException's [{ field, message }]).
+function translateErrors(c: Context, errors: any) {
+    if (!Array.isArray(errors)) return errors
+
+    return errors.map((error) =>
+        error && typeof error === "object" && typeof error.message === "string"
+            ? { ...error, message: translate(c, error.message) }
+            : error
+    )
+}
 
 /**
  * Standard API Response Formatter (Best Practice)
@@ -7,16 +19,16 @@ import { ContentfulStatusCode } from "hono/utils/http-status"
  */
 export class ApiResponse {
     static success<T>(
-        c: Context, 
-        data: T, 
-        message: string = "Success", 
-        status: number = 200, 
+        c: Context,
+        data: T,
+        message: string = "Success",
+        status: number = 200,
         meta?: any
     ) {
         return c.json({
             success: true,
             statusCode: status,
-            message: message,
+            message: translate(c, message),
             data: data,
             ...(meta && { meta })
         }, status as ContentfulStatusCode)
@@ -31,11 +43,11 @@ export class ApiResponse {
         message: string = "Success"
     ) {
         const lastPage = Math.ceil(total / limit)
-        
+
         return c.json({
             success: true,
             statusCode: 200,
-            message: message,
+            message: translate(c, message),
             data: data,
             meta: {
                 total,
@@ -49,16 +61,16 @@ export class ApiResponse {
     }
 
     static error(
-        c: Context, 
-        message: string = "Internal Server Error", 
-        status: number = 500, 
+        c: Context,
+        message: string = "Internal Server Error",
+        status: number = 500,
         errors: any = null
     ) {
         return c.json({
             success: false,
             statusCode: status,
-            message: message,
-            errors: errors
+            message: translate(c, message),
+            errors: translateErrors(c, errors)
         }, status as ContentfulStatusCode)
     }
 }

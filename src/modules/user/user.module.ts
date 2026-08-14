@@ -1,4 +1,4 @@
-import { TypeOrmUserRepository } from "./repositories/typeorm-user.repository"
+import { TypeOrmUserRepository } from "./repositories/user.repository"
 import { UserService } from "./user.service"
 import { UserController } from "./user.controller"
 

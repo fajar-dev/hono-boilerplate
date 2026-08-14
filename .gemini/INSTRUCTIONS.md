@@ -37,31 +37,34 @@ Controller → Service → Repository (via Interface)
 5. **JANGAN** throw generic `Error()` → gunakan custom exception dari `src/core/exceptions/base.ts`
 6. **JANGAN** expose data sensitif (password, token) → gunakan Serializer
 7. **JANGAN** instantiate service/repository di controller → wiring hanya di `*.module.ts`
+8. **JANGAN** pakai `console.log`/`console.error` langsung → gunakan `logger` dari `src/core/helpers/logger.ts` (baca `docs/LOGGING_GUIDE.md`)
 
 ## Membuat Module Baru
 
 Baca panduan lengkap: `docs/MODULE_GUIDE.md`
 
 Checklist:
-1. `entities/{nama}.entity.ts` — TypeORM entity
-2. `interfaces/{nama}.repository.interface.ts` — Repository contract
-3. `repositories/typeorm-{nama}.repository.ts` — TypeORM implementation
-4. `{nama}.service.ts` — Business logic
-5. `{nama}.controller.ts` — HTTP handlers
-6. `validators/{nama}.validator.ts` — Zod schemas
-7. `serializers/{nama}.serialize.ts` — Response transform
-8. `{nama}.module.ts` — DI wiring (Composition Root)
-9. Daftarkan entity di `src/config/database.ts` → array `entities`
-10. Tambahkan route di `src/routes/api.ts`
-11. Update `swagger.yaml`
-12. Update `docs/CHANGELOG.md`
+1. `enum/{nama}.enum.ts` — Enum (opsional, hanya jika ada field enum)
+2. `entities/{nama}.entity.ts` — TypeORM entity
+3. `interfaces/{nama}.repository.interface.ts` — Repository contract
+4. `repositories/{nama}.repository.ts` — TypeORM implementation
+5. `{nama}.service.ts` — Business logic
+6. `{nama}.controller.ts` — HTTP handlers
+7. `validators/{nama}.validator.ts` — Zod schemas
+8. `serializers/{nama}.serialize.ts` — Response transform
+9. `{nama}.module.ts` — DI wiring (Composition Root)
+10. Daftarkan entity di `src/config/database.ts` → array `entities`
+11. Tambahkan route di `src/routes/api.ts`
+12. Update `swagger.yaml` (baca `docs/SWAGGER_GUIDE.md`)
+13. Update `docs/CHANGELOG.md`
 
 ## Naming Conventions
 
 ### Files (kebab-case)
+- Enum: `{nama}.enum.ts` (di dalam folder `enum/`, singular)
 - Entity: `{nama}.entity.ts`
 - Repo interface: `{nama}.repository.interface.ts`
-- Repo implementation: `typeorm-{nama}.repository.ts`
+- Repo implementation: `{nama}.repository.ts`
 - Service: `{nama}.service.ts`
 - Controller: `{nama}.controller.ts`
 - Validator: `{nama}.validator.ts`
@@ -70,6 +73,7 @@ Checklist:
 - Middleware: `{nama}.middleware.ts`
 
 ### Classes (PascalCase)
+- Enum: nama deskriptif, tanpa prefix nama module (`ContactType`, bukan `ContactTypeEnum`)
 - Entity: `Invoice`
 - Repo interface: `IInvoiceRepository`
 - Repo implementation: `TypeOrmInvoiceRepository`
@@ -149,6 +153,15 @@ routes.put("/{resource}/:id", authMiddleware, zValidator("json", UpdateXxxValida
 routes.delete("/{resource}/:id", authMiddleware, (c) => xxxController.destroy(c))
 ```
 
+## Language Detection & Pesan Response
+
+- Bahasa dideteksi dari header `Accept-Language`, bukan query string atau cookie.
+- Didukung: `en` (default) dan `id`. Header tidak dikirim atau bahasa tidak didukung → fallback `en`.
+- Bahasa yang terdeteksi tersedia via `c.get("language")` di controller/service, dan dikembalikan ke client melalui response header `Content-Language`.
+- Middleware: `src/core/middlewares/language.middleware.ts`, didaftarkan global di `src/index.ts` (dan `test/setup.ts` untuk test).
+- Message pada `ApiResponse.success/paginate/error` otomatis diterjemahkan ke Indonesia via `translate()` di `src/core/helpers/i18n.ts`.
+- Kamus terjemahan JSON, key sama persis di kedua file: `src/core/i18n/en.json` dan `src/core/i18n/id.json`. Tulis message di kode selalu dalam Bahasa Inggris.
+
 ## File Referensi Penting
 
 | Kebutuhan | File |
@@ -162,6 +175,7 @@ routes.delete("/{resource}/:id", authMiddleware, (c) => xxxController.destroy(c)
 | Password | `src/core/helpers/hash.ts` |
 | Email | `src/core/helpers/mail.ts` |
 | File storage | `src/core/helpers/minio.ts` |
+| Structured logger (JSON) | `src/core/helpers/logger.ts` |
 | Routes | `src/routes/api.ts` |
 | Swagger | `swagger.yaml` |
 | Test setup | `test/setup.ts` |
@@ -210,6 +224,9 @@ Baca semua file di folder `docs/` untuk detail lebih lanjut:
 - `docs/API_CONVENTIONS.md` — Standar API response & error
 - `docs/DATABASE_GUIDE.md` — Entity, repository, query patterns
 - `docs/TESTING_GUIDE.md` — Panduan testing lengkap + template
+- `docs/LANGUAGE_GUIDE.md` — Panduan language detection & terjemahan message (i18n)
+- `docs/SWAGGER_GUIDE.md` — Panduan menulis & memvalidasi `swagger.yaml`
+- `docs/LOGGING_GUIDE.md` — Panduan structured logging (JSON) & integrasi Grafana Loki
 - `docs/CHANGELOG.md` — Riwayat perubahan
 - `docs/ENVIRONMENT.md` — Environment variables & deployment
 - `docs/PROJECT_MAP.md` — Peta file & dependency graph

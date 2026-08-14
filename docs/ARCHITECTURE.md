@@ -112,7 +112,7 @@ Error ditangani di `src/index.ts` → `app.onError()`:
 |------------|--------|----------|
 | `ZodError` | 422 | Di-wrap ke `ValidatorException`, mengembalikan array field errors |
 | `BaseException` (dan subclass) | Sesuai subclass | Mengembalikan `message`, `status`, dan `context` |
-| Unknown Error | 500 | Log ke file (`logs/error.log`), tampilkan stack trace hanya di `development` |
+| Unknown Error | 500 | Log JSON ke `logs/app-{date}.log`, tampilkan stack trace hanya di `development` |
 
 ---
 
@@ -136,7 +136,7 @@ Error ditangani di `src/index.ts` → `app.onError()`:
 | **Hash** | `core/helpers/hash.ts` | bcrypt password hashing & comparison |
 | **Mail** | `core/helpers/mail.ts` | Singleton Nodemailer wrapper (sendText, sendHtml) |
 | **MinIO** | `core/helpers/minio.ts` | Singleton MinIO wrapper (upload, delete, presignedUrl, proxy) |
-| **Logger** | `core/helpers/logger.ts` | Error logging ke file (`logs/error.log`) |
+| **Logger** | `core/helpers/logger.ts` | Structured JSON logger (stdout/stderr + `logs/app-{date}.log`, semua level), lihat `LOGGING_GUIDE.md` |
 | **Validator** | `core/helpers/validator.ts` | Zod validation hook untuk Hono |
 | **Auth Middleware** | `core/middlewares/auth.middleware.ts` | JWT Bearer token verification |
 | **API Key Middleware** | `core/middlewares/api-key.middleware.ts` | x-api-key header verification |

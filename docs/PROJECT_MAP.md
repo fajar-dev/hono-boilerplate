@@ -15,6 +15,10 @@ hono-be/
 │   ├── MODULE_GUIDE.md                      # Panduan membuat module baru
 │   ├── API_CONVENTIONS.md                   # Konvensi API
 │   ├── DATABASE_GUIDE.md                    # Panduan database
+│   ├── TESTING_GUIDE.md                     # Panduan testing lengkap
+│   ├── LANGUAGE_GUIDE.md                    # Panduan language detection & i18n
+│   ├── SWAGGER_GUIDE.md                     # Panduan menulis swagger.yaml
+│   ├── LOGGING_GUIDE.md                     # Panduan structured logging & Loki
 │   ├── CHANGELOG.md                         # Riwayat perubahan
 │   ├── AI_AGENT_RULES.md                    # Aturan untuk AI agent
 │   ├── ENVIRONMENT.md                       # Konfigurasi environment
@@ -35,11 +39,16 @@ hono-be/
 │   │   ├── helpers/
 │   │   │   ├── auth.ts                      # 🔑 JWT token & Google OAuth
 │   │   │   ├── hash.ts                      # 🔒 bcrypt password hashing
-│   │   │   ├── logger.ts                    # 📋 Error file logging
+│   │   │   ├── i18n.ts                      # 🌐 Message translator (en/id)
+│   │   │   ├── logger.ts                    # 📋 Structured JSON logger (stdout/stderr + logs/app-{date}.log)
 │   │   │   ├── mail.ts                      # ✉️ Email sender (SMTP)
 │   │   │   ├── minio.ts                     # 📦 MinIO object storage
 │   │   │   ├── response.ts                  # 📤 API response formatter
 │   │   │   └── validator.ts                 # ✅ Zod validation hook
+│   │   │
+│   │   ├── i18n/
+│   │   │   ├── en.json                      # 🇬🇧 English messages (master list)
+│   │   │   └── id.json                      # 🇮🇩 Indonesian translations
 │   │   │
 │   │   ├── interfaces/
 │   │   │   └── base.repository.interface.ts # 📋 Base repository interface
@@ -47,7 +56,9 @@ hono-be/
 │   │   └── middlewares/
 │   │       ├── auth.middleware.ts            # 🛡️ JWT Bearer auth
 │   │       ├── api-key.middleware.ts         # 🔐 API key auth
-│   │       └── token-auth.middleware.ts      # 🎫 JWT via query/header
+│   │       ├── token-auth.middleware.ts      # 🎫 JWT via query/header
+│   │       ├── logger.middleware.ts          # 📝 Request access log + X-Request-Id
+│   │       └── language.middleware.ts        # 🌐 Accept-Language detection (en/id)
 │   │
 │   ├── modules/
 │   │   ├── auth/
@@ -67,7 +78,7 @@ hono-be/
 │   │   │   ├── interfaces/
 │   │   │   │   └── user.repository.interface.ts  # 📋 User repo contract
 │   │   │   ├── repositories/
-│   │   │   │   └── typeorm-user.repository.ts    # 🗄️ User DB access
+│   │   │   │   └── user.repository.ts    # 🗄️ User DB access
 │   │   │   └── serializers/
 │   │   │       ├── user.serialize.ts              # 📤 User detail shape
 │   │   │       └── user-list.serialize.ts         # 📤 User list shape
@@ -78,10 +89,13 @@ hono-be/
 │   │       ├── contact.service.ts           # 💼 Contact business logic
 │   │       ├── entities/
 │   │       │   └── contact.entity.ts        # 🗄️ Contact TypeORM entity
+│   │       ├── enum/
+│   │       │   ├── salutation.enum.ts       # 🏷️ Salutation enum
+│   │       │   └── type.enum.ts             # 🏷️ ContactType enum
 │   │       ├── interfaces/
 │   │       │   └── contact.repository.interface.ts  # 📋 Contact repo contract
 │   │       ├── repositories/
-│   │       │   └── typeorm-contact.repository.ts    # 🗄️ Contact DB access
+│   │       │   └── contact.repository.ts    # 🗄️ Contact DB access
 │   │       ├── serializers/
 │   │       │   └── contact.serialize.ts             # 📤 Contact response shape
 │   │       └── validators/
@@ -124,7 +138,7 @@ src/index.ts
     ├── src/config/config.ts            → config
     ├── src/routes/api.ts               → routes
     ├── src/core/helpers/response.ts    → ApiResponse
-    ├── src/core/helpers/logger.ts      → logError
+    ├── src/core/helpers/logger.ts      → logger
     └── src/core/exceptions/base.ts     → BaseException, ValidatorException
 ```
 
@@ -172,7 +186,7 @@ src/modules/auth/auth.controller.ts
 
 ```
 src/modules/user/user.module.ts
-    ├── src/modules/user/repositories/typeorm-user.repository.ts
+    ├── src/modules/user/repositories/user.repository.ts
     └── src/modules/user/user.service.ts
 
 src/modules/user/user.service.ts
@@ -180,7 +194,7 @@ src/modules/user/user.service.ts
     ├── src/modules/user/interfaces/user.repository.interface.ts  → IUserRepository (injected)
     └── src/core/exceptions/base.ts
 
-src/modules/user/repositories/typeorm-user.repository.ts
+src/modules/user/repositories/user.repository.ts
     ├── src/config/database.ts               → AppDataSource
     ├── src/modules/user/entities/user.entity.ts
     └── src/modules/user/interfaces/user.repository.interface.ts
@@ -190,7 +204,7 @@ src/modules/user/repositories/typeorm-user.repository.ts
 
 ```
 src/modules/contact/contact.module.ts
-    ├── src/modules/contact/repositories/typeorm-contact.repository.ts
+    ├── src/modules/contact/repositories/contact.repository.ts
     ├── src/modules/contact/contact.service.ts
     └── src/modules/contact/contact.controller.ts
 
