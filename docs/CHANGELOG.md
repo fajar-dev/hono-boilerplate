@@ -6,17 +6,6 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [0.2.0] — 2026-08-15
-
-### Added
-- `GET /contact` dan `GET /user` menerima query param `sortBy`/`order` untuk sorting kolom, dengan whitelist `SORTABLE_COLUMNS` di masing-masing repository untuk mencegah SQL injection lewat `.orderBy()`.
-- `ContactSerializer` menyertakan field `salutation`, `type`, dan `isActive` di response (sebelumnya tidak diekspos meski sudah ada di entity).
-
-### Changed
-- `IContactRepository.findAll` dan `IUserRepository.findAll` — signature diperluas dengan parameter `sortBy?: string, order?: SortOrder`.
-
----
-
 ## [0.1.0] — 2026-06-18
 
 ### Added
