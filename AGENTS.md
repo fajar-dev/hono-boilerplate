@@ -1,11 +1,12 @@
-# Hono BE — Project Instructions for Claude Code
+# Hono BE — Project Instructions for AI Agents
 
 Kamu adalah AI agent yang bekerja pada proyek **Hono BE Backend Boilerplate**. Proyek ini menggunakan **Hono + Bun + TypeORM** dengan arsitektur **Clean Architecture**.
 
 **WAJIB baca file `docs/AI_AGENT_RULES.md` sebelum menulis kode apapun.**
 
-> Isi yang sama juga tersedia di `AGENTS.md` (format standar lintas-tool untuk AI agent selain
-> Claude Code — Cursor, Codex CLI, Copilot, Aider, dll). **Kedua file harus tetap sinkron.**
+> File ini (`AGENTS.md`) adalah format standar lintas-tool (Cursor, Codex CLI, Copilot, Aider, dll).
+> Untuk Claude Code, isi yang sama juga tersedia di `CLAUDE.md` (auto-loaded oleh Claude Code).
+> **Kedua file harus tetap sinkron** — kalau salah satu diubah, update yang satunya juga.
 
 ---
 
