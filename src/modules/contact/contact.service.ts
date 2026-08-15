@@ -2,12 +2,13 @@ import { Contact } from "./entities/contact.entity"
 import { NotFoundException } from "../../core/exceptions/base"
 import { EntityManager } from "typeorm"
 import { IContactRepository } from "./interfaces/contact.repository.interface"
+import { SortOrder } from "../../core/interfaces/base.repository.interface"
 
 export class ContactService {
     constructor(private readonly repository: IContactRepository) {}
 
-    async getAll(page: number, limit: number, q: string): Promise<{ data: Contact[]; total: number }> {
-        return await this.repository.findAll(page, limit, q)
+    async getAll(page: number, limit: number, q: string, sortBy?: string, order?: SortOrder): Promise<{ data: Contact[]; total: number }> {
+        return await this.repository.findAll(page, limit, q, sortBy, order)
     }
 
     async getById(id: number): Promise<Contact> {

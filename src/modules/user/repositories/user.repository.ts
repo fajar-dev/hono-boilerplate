@@ -2,6 +2,14 @@ import { EntityManager, Repository } from "typeorm"
 import { AppDataSource } from "../../../config/database"
 import { User } from "../entities/user.entity"
 import { IUserRepository, UserListFilters } from "../interfaces/user.repository.interface"
+import { SortOrder } from "../../../core/interfaces/base.repository.interface"
+
+const SORTABLE_COLUMNS: Record<string, string> = {
+    name: "user.name",
+    email: "user.email",
+    isActive: "user.is_active",
+    createdAt: "user.created_at",
+}
 
 export class TypeOrmUserRepository implements IUserRepository {
     private readonly repository: Repository<User>
@@ -10,7 +18,7 @@ export class TypeOrmUserRepository implements IUserRepository {
         this.repository = AppDataSource.getRepository(User)
     }
 
-    async findAll(page: number, limit: number, q: string, filters: UserListFilters = {}): Promise<{ data: any[]; total: number }> {
+    async findAll(page: number, limit: number, q: string, filters: UserListFilters = {}, sortBy?: string, order: SortOrder = "DESC"): Promise<{ data: any[]; total: number }> {
         const offset = (page - 1) * limit
 
         const query = this.repository.createQueryBuilder("user")
@@ -38,8 +46,10 @@ export class TypeOrmUserRepository implements IUserRepository {
         const total = await query.clone().getCount()
 
         // Get paginated data
+        const orderColumn = (sortBy && SORTABLE_COLUMNS[sortBy]) || "user.id"
+
         const data = await query
-            .orderBy("user.id", "DESC")
+            .orderBy(orderColumn, order)
             .limit(limit)
             .offset(offset)
             .getRawMany()

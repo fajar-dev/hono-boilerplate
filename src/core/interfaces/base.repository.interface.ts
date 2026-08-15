@@ -1,5 +1,7 @@
 import { EntityManager } from "typeorm"
 
+export type SortOrder = "ASC" | "DESC"
+
 /**
  * Base Repository Interface
  * All module-specific repository interfaces should extend this.

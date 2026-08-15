@@ -225,7 +225,7 @@ GET /api/resource?token=<jwt_token>
 | `page` | number | 1 | Nomor halaman |
 | `limit` | number | 10 | Jumlah item per halaman |
 | `q` | string | "" | Keyword pencarian |
-| `sort` | string | "id" | Kolom untuk sorting (opsional, per-module) |
+| `sortBy` | string | "id" | Kolom untuk sorting — hanya kolom yang ada di whitelist `SORTABLE_COLUMNS` module tersebut, lihat `docs/DATABASE_GUIDE.md` §5 (opsional, per-module) |
 | `order` | string | "DESC" | Arah sorting: ASC / DESC (opsional, per-module) |
 
 ---

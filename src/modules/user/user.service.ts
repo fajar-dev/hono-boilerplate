@@ -4,12 +4,13 @@ import { EntityManager } from "typeorm"
 import { IUserRepository, UserListFilters } from "./interfaces/user.repository.interface"
 import { hashPassword } from "../../core/helpers/hash"
 import { minio } from "../../core/helpers/minio"
+import { SortOrder } from "../../core/interfaces/base.repository.interface"
 
 export class UserService {
     constructor(private readonly repository: IUserRepository) {}
 
-    async getAll(page: number, limit: number, q: string, filters: UserListFilters = {}): Promise<{ data: any[]; total: number }> {
-        return await this.repository.findAll(page, limit, q, filters)
+    async getAll(page: number, limit: number, q: string, filters: UserListFilters = {}, sortBy?: string, order?: SortOrder): Promise<{ data: any[]; total: number }> {
+        return await this.repository.findAll(page, limit, q, filters, sortBy, order)
     }
 
     async getById(id: number): Promise<User> {

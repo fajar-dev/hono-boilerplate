@@ -129,7 +129,7 @@ IInvoiceRepository (interface)
 
 | Method | Return Type | Deskripsi |
 |--------|------------|-----------|
-| `findAll(page, limit, q)` | `Promise<{ data: T[]; total: number }>` | List dengan pagination |
+| `findAll(page, limit, q, sortBy?, order?)` | `Promise<{ data: T[]; total: number }>` | List dengan pagination + sorting (lihat §5) |
 | `findById(id)` | `Promise<T \| null>` | Cari by ID |
 | `save(data, manager?)` | `Promise<T>` | Simpan (create/update) |
 | `merge(entity, data)` | `T` | Merge data partial ke entity |
@@ -158,10 +158,19 @@ async save(data: Partial<T>, manager?: EntityManager): Promise<T> {
 
 ## 5. Query Builder Patterns
 
-### Basic Pagination dengan Search
+### Basic Pagination dengan Search dan Sorting
 
 ```typescript
-async findAll(page: number, limit: number, q: string) {
+import { SortOrder } from "../../core/interfaces/base.repository.interface"
+
+// Whitelist kolom yang boleh di-sort — JANGAN masukkan sortBy langsung ke .orderBy() (SQL injection)
+const SORTABLE_COLUMNS: Record<string, string> = {
+    name: "alias.name",
+    email: "alias.email",
+    createdAt: "alias.createdAt",
+}
+
+async findAll(page: number, limit: number, q: string, sortBy?: string, order: SortOrder = "DESC") {
     const offset = (page - 1) * limit
     const query = this.repository.createQueryBuilder("alias")
 
@@ -173,8 +182,9 @@ async findAll(page: number, limit: number, q: string) {
     }
 
     const total = await query.getCount()
+    const orderColumn = (sortBy && SORTABLE_COLUMNS[sortBy]) || "alias.id"
     const data = await query
-        .orderBy("alias.id", "DESC")
+        .orderBy(orderColumn, order)
         .skip(offset)
         .take(limit)
         .getMany()
@@ -182,6 +192,15 @@ async findAll(page: number, limit: number, q: string) {
     return { data, total }
 }
 ```
+
+Controller membaca `sortBy`/`order` dari query string:
+
+```typescript
+const sortBy = c.req.query("sortBy") || undefined
+const order = c.req.query("order")?.toUpperCase() === "ASC" ? "ASC" : "DESC"
+```
+
+> Kalau repository pakai `.getRawMany()` (select manual dengan `AS` alias, contoh: `UserRepository`), `SORTABLE_COLUMNS` harus mengarah ke nama kolom SQL asli (`alias.is_active`, `alias.created_at`), bukan nama alias hasil `AS`.
 
 ### Filter Query
 

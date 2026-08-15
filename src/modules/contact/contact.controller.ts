@@ -10,8 +10,10 @@ export class ContactController {
         const page = Number(c.req.query("page") || 1)
         const limit = Number(c.req.query("limit") || 10)
         const q = c.req.query("q") || ""
+        const sortBy = c.req.query("sortBy") || undefined
+        const order = c.req.query("order")?.toUpperCase() === "ASC" ? "ASC" : "DESC"
 
-        const { data, total } = await this.service.getAll(page, limit, q)
+        const { data, total } = await this.service.getAll(page, limit, q, sortBy, order)
 
         return ApiResponse.paginate(c, ContactSerializer.collection(data), total, page, limit, 'Contacts retrieved successfully')
     }

@@ -109,9 +109,10 @@ export class Invoice {
 ```typescript
 import { EntityManager } from "typeorm"
 import { Invoice } from "../entities/invoice.entity"
+import { SortOrder } from "../../../core/interfaces/base.repository.interface"
 
 export interface IInvoiceRepository {
-    findAll(page: number, limit: number, q: string): Promise<{ data: Invoice[]; total: number }>
+    findAll(page: number, limit: number, q: string, sortBy?: string, order?: SortOrder): Promise<{ data: Invoice[]; total: number }>
     findById(id: number): Promise<Invoice | null>
     save(data: Partial<Invoice>, manager?: EntityManager): Promise<Invoice>
     merge(entity: Invoice, data: Partial<Invoice>): Invoice
@@ -140,6 +141,14 @@ import { EntityManager, Repository } from "typeorm"
 import { AppDataSource } from "../../../config/database"
 import { Invoice } from "../entities/invoice.entity"
 import { IInvoiceRepository } from "../interfaces/invoice.repository.interface"
+import { SortOrder } from "../../../core/interfaces/base.repository.interface"
+
+// Whitelist kolom yang boleh di-sort — JANGAN masukkan sortBy langsung ke .orderBy() (SQL injection)
+const SORTABLE_COLUMNS: Record<string, string> = {
+    number: "invoice.number",
+    amount: "invoice.amount",
+    createdAt: "invoice.createdAt",
+}
 
 export class TypeOrmInvoiceRepository implements IInvoiceRepository {
     private readonly repository: Repository<Invoice>
@@ -148,7 +157,7 @@ export class TypeOrmInvoiceRepository implements IInvoiceRepository {
         this.repository = AppDataSource.getRepository(Invoice)
     }
 
-    async findAll(page: number, limit: number, q: string): Promise<{ data: Invoice[]; total: number }> {
+    async findAll(page: number, limit: number, q: string, sortBy?: string, order: SortOrder = "DESC"): Promise<{ data: Invoice[]; total: number }> {
         const offset = (page - 1) * limit
 
         const query = this.repository.createQueryBuilder("invoice")
@@ -162,8 +171,10 @@ export class TypeOrmInvoiceRepository implements IInvoiceRepository {
 
         const total = await query.getCount()
 
+        const orderColumn = (sortBy && SORTABLE_COLUMNS[sortBy]) || "invoice.id"
+
         const data = await query
-            .orderBy("invoice.id", "DESC")
+            .orderBy(orderColumn, order)
             .skip(offset)
             .take(limit)
             .getMany()
@@ -211,12 +222,13 @@ import { Invoice } from "./entities/invoice.entity"
 import { NotFoundException } from "../../core/exceptions/base"
 import { EntityManager } from "typeorm"
 import { IInvoiceRepository } from "./interfaces/invoice.repository.interface"
+import { SortOrder } from "../../core/interfaces/base.repository.interface"
 
 export class InvoiceService {
     constructor(private readonly repository: IInvoiceRepository) {}
 
-    async getAll(page: number, limit: number, q: string): Promise<{ data: Invoice[]; total: number }> {
-        return await this.repository.findAll(page, limit, q)
+    async getAll(page: number, limit: number, q: string, sortBy?: string, order?: SortOrder): Promise<{ data: Invoice[]; total: number }> {
+        return await this.repository.findAll(page, limit, q, sortBy, order)
     }
 
     async getById(id: number): Promise<Invoice> {
@@ -275,8 +287,10 @@ export class InvoiceController {
         const page = Number(c.req.query("page") || 1)
         const limit = Number(c.req.query("limit") || 10)
         const q = c.req.query("q") || ""
+        const sortBy = c.req.query("sortBy") || undefined
+        const order = c.req.query("order")?.toUpperCase() === "ASC" ? "ASC" : "DESC"
 
-        const { data, total } = await this.service.getAll(page, limit, q)
+        const { data, total } = await this.service.getAll(page, limit, q, sortBy, order)
 
         return ApiResponse.paginate(c, InvoiceSerializer.collection(data), total, page, limit, "Invoices retrieved successfully")
     }

@@ -185,8 +185,11 @@ components:
       properties:
         id: { type: integer, example: 1 }
         name: { type: string, example: "John Doe" }
+        salutation: { allOf: [{ $ref: "#/components/schemas/Salutation" }], nullable: true }
         email: { type: string, format: email, nullable: true, example: "john@example.com" }
         phone: { type: string, nullable: true, example: "081234567890" }
+        type: { $ref: "#/components/schemas/ContactType" }
+        isActive: { type: boolean, example: true }
         createdAt: { type: string, format: date-time, example: "2026-06-01T08:00:00.000Z" }
         updatedAt: { type: string, format: date-time, example: "2026-06-01T08:00:00.000Z" }
 
@@ -618,6 +621,13 @@ paths:
           in: query
           description: Search by name, email, or phone
           schema: { type: string }
+        - name: sortBy
+          in: query
+          description: "Column to sort by. Falls back to id if omitted or not sortable."
+          schema: { type: string, enum: [name, email, phone, type, isActive, createdAt] }
+        - name: order
+          in: query
+          schema: { type: string, enum: [ASC, DESC], default: DESC }
       responses:
         "200":
           description: Contacts retrieved successfully
@@ -789,6 +799,13 @@ paths:
           in: query
           description: Filter by status ("1" = active, "0" = inactive)
           schema: { type: string, enum: ["1", "0"] }
+        - name: sortBy
+          in: query
+          description: "Column to sort by. Falls back to id if omitted or not sortable."
+          schema: { type: string, enum: [name, email, isActive, createdAt] }
+        - name: order
+          in: query
+          schema: { type: string, enum: [ASC, DESC], default: DESC }
       responses:
         "200":
           description: Users retrieved successfully

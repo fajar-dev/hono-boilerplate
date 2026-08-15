@@ -112,6 +112,24 @@ describe("POST /api/contact", () => {
         expect(body.data.name).toBe("Minimal Contact")
         expect(body.data.email).toBeNull()
         expect(body.data.phone).toBeNull()
+        expect(body.data.salutation).toBeNull()
+        expect(body.data.type).toBe("customer")
+        expect(body.data.isActive).toBe(true)
+    })
+
+    test("should create a contact with salutation, type, and isActive", async () => {
+        const { headers } = await registerAndLogin(app)
+
+        const { status, body } = await request(app, "/api/contact", {
+            method: "POST",
+            headers,
+            body: createContactData({ salutation: "mrs", type: "vendor", isActive: false }),
+        })
+
+        expect(status).toBe(201)
+        expect(body.data.salutation).toBe("mrs")
+        expect(body.data.type).toBe("vendor")
+        expect(body.data.isActive).toBe(false)
     })
 
     test("should fail validation without name", async () => {
@@ -248,6 +266,53 @@ describe("GET /api/contact", () => {
         expect(body.data.length).toBe(2)
         expect(body.meta.total).toBe(2)
     })
+
+    test("should sort by name ascending", async () => {
+        const { headers } = await registerAndLogin(app)
+
+        await request(app, "/api/contact", { method: "POST", headers, body: { name: "Charlie" } })
+        await request(app, "/api/contact", { method: "POST", headers, body: { name: "Alice" } })
+        await request(app, "/api/contact", { method: "POST", headers, body: { name: "Bob" } })
+
+        const { status, body } = await request(app, "/api/contact?sortBy=name&order=ASC", {
+            method: "GET",
+            headers,
+        })
+
+        expect(status).toBe(200)
+        expect(body.data.map((c: any) => c.name)).toEqual(["Alice", "Bob", "Charlie"])
+    })
+
+    test("should sort by name descending", async () => {
+        const { headers } = await registerAndLogin(app)
+
+        await request(app, "/api/contact", { method: "POST", headers, body: { name: "Charlie" } })
+        await request(app, "/api/contact", { method: "POST", headers, body: { name: "Alice" } })
+        await request(app, "/api/contact", { method: "POST", headers, body: { name: "Bob" } })
+
+        const { body } = await request(app, "/api/contact?sortBy=name&order=DESC", {
+            method: "GET",
+            headers,
+        })
+
+        expect(body.data.map((c: any) => c.name)).toEqual(["Charlie", "Bob", "Alice"])
+    })
+
+    test("should default to id DESC when sortBy is not a sortable column", async () => {
+        const { headers } = await registerAndLogin(app)
+
+        const first = await request(app, "/api/contact", { method: "POST", headers, body: { name: "First" } })
+        const second = await request(app, "/api/contact", { method: "POST", headers, body: { name: "Second" } })
+
+        const { status, body } = await request(app, "/api/contact?sortBy=password", {
+            method: "GET",
+            headers,
+        })
+
+        expect(status).toBe(200)
+        expect(body.data[0].id).toBe(second.body.data.id)
+        expect(body.data[1].id).toBe(first.body.data.id)
+    })
 })
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -324,6 +389,28 @@ describe("PUT /api/contact/:id", () => {
         expect(body.message).toBe("Contact updated successfully")
         expect(body.data.name).toBe("Updated Name")
         expect(body.data.email).toBe("updated@example.com")
+    })
+
+    test("should update salutation, type, and isActive", async () => {
+        const { headers } = await registerAndLogin(app)
+
+        const createRes = await request(app, "/api/contact", {
+            method: "POST",
+            headers,
+            body: createContactData(),
+        })
+        const contactId = createRes.body.data.id
+
+        const { status, body } = await request(app, `/api/contact/${contactId}`, {
+            method: "PUT",
+            headers,
+            body: { name: "Updated Contact", salutation: "mr", type: "supplier", isActive: false },
+        })
+
+        expect(status).toBe(200)
+        expect(body.data.salutation).toBe("mr")
+        expect(body.data.type).toBe("supplier")
+        expect(body.data.isActive).toBe(false)
     })
 
     test("should update partial fields only", async () => {

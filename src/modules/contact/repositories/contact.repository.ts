@@ -2,6 +2,16 @@ import { EntityManager, Repository } from "typeorm"
 import { AppDataSource } from "../../../config/database"
 import { Contact } from "../entities/contact.entity"
 import { IContactRepository } from "../interfaces/contact.repository.interface"
+import { SortOrder } from "../../../core/interfaces/base.repository.interface"
+
+const SORTABLE_COLUMNS: Record<string, string> = {
+    name: "contact.name",
+    email: "contact.email",
+    phone: "contact.phone",
+    type: "contact.type",
+    isActive: "contact.isActive",
+    createdAt: "contact.createdAt",
+}
 
 export class TypeOrmContactRepository implements IContactRepository {
     private readonly repository: Repository<Contact>
@@ -10,7 +20,7 @@ export class TypeOrmContactRepository implements IContactRepository {
         this.repository = AppDataSource.getRepository(Contact)
     }
 
-    async findAll(page: number, limit: number, q: string): Promise<{ data: Contact[]; total: number }> {
+    async findAll(page: number, limit: number, q: string, sortBy?: string, order: SortOrder = "DESC"): Promise<{ data: Contact[]; total: number }> {
         const offset = (page - 1) * limit
 
         const query = this.repository.createQueryBuilder("contact")
@@ -24,8 +34,10 @@ export class TypeOrmContactRepository implements IContactRepository {
 
         const total = await query.getCount()
 
+        const orderColumn = (sortBy && SORTABLE_COLUMNS[sortBy]) || "contact.id"
+
         const data = await query
-            .orderBy("contact.id", "DESC")
+            .orderBy(orderColumn, order)
             .skip(offset)
             .take(limit)
             .getMany()

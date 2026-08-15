@@ -214,6 +214,37 @@ describe("GET /api/user", () => {
         expect(body.data.length).toBe(1)
         expect(body.data[0].name).toBe("Alice Cooper")
     })
+
+    test("should sort by name ascending", async () => {
+        const { headers } = await registerAndLogin(app)
+
+        await request(app, "/api/user", { method: "POST", headers, body: { name: "Zed Sortable", email: "zed-sort@example.com", password: "password123" } })
+        await request(app, "/api/user", { method: "POST", headers, body: { name: "Amy Sortable", email: "amy-sort@example.com", password: "password123" } })
+        await request(app, "/api/user", { method: "POST", headers, body: { name: "Milo Sortable", email: "milo-sort@example.com", password: "password123" } })
+
+        const { status, body } = await request(app, "/api/user?q=Sortable&sortBy=name&order=ASC", {
+            method: "GET",
+            headers,
+        })
+
+        expect(status).toBe(200)
+        expect(body.data.map((u: any) => u.name)).toEqual(["Amy Sortable", "Milo Sortable", "Zed Sortable"])
+    })
+
+    test("should sort by name descending", async () => {
+        const { headers } = await registerAndLogin(app)
+
+        await request(app, "/api/user", { method: "POST", headers, body: { name: "Zed Sortable", email: "zed-sort@example.com", password: "password123" } })
+        await request(app, "/api/user", { method: "POST", headers, body: { name: "Amy Sortable", email: "amy-sort@example.com", password: "password123" } })
+        await request(app, "/api/user", { method: "POST", headers, body: { name: "Milo Sortable", email: "milo-sort@example.com", password: "password123" } })
+
+        const { body } = await request(app, "/api/user?q=Sortable&sortBy=name&order=DESC", {
+            method: "GET",
+            headers,
+        })
+
+        expect(body.data.map((u: any) => u.name)).toEqual(["Zed Sortable", "Milo Sortable", "Amy Sortable"])
+    })
 })
 
 // ═══════════════════════════════════════════════════════════════════════════
